@@ -1,0 +1,139 @@
+/* Tooltip base styles */
+.tooltip-container {
+    position: relative;
+}
+
+.tooltip-container.clickable {
+    cursor: pointer;
+}
+
+/* Variables Colores Tooltip */
+:root {
+    --tooltip-info: var(--primary3);
+    --tooltip-warning: #f82a2a;
+    --tooltip-success: var(--primary2); 
+}
+
+/* Tooltip content */
+.tooltip {
+    visibility: hidden;
+    opacity: 0;
+    position: absolute;
+    z-index: 1000;
+    color: white;
+    text-align: left;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 13px;
+    white-space: nowrap;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    transition: opacity 0.3s, visibility 0.3s;
+    pointer-events: none;
+}
+
+/* Tooltip positioning */
+.tooltip-top {
+    bottom: 125%;
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+.tooltip-bottom {
+    top: 125%;
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+/* Tooltip arrows - usando ::before para evitar conflictos */
+.tooltip::before {
+    content: "";
+    position: absolute;
+    border-width: 5px;
+    border-style: solid;
+    z-index: 1001;
+}
+
+.tooltip-top::before {
+    top: 100%;
+    left: 50%;
+    margin-left: -5px;
+    border-color: #333 transparent transparent transparent;
+}
+
+.tooltip-bottom::before {
+    bottom: 100%;
+    left: 50%;
+    margin-left: -5px;
+    border-color: transparent transparent #333 transparent;
+}
+
+/* Colores específicos para las flechas de tooltips coloreados */
+.tooltip-info::before {
+    border-top-color: var(--tooltip-info);
+}
+
+.tooltip-warning::before {
+    border-top-color: var(--tooltip-warning);
+}
+
+.tooltip-success::before {
+    border-top-color: var(--tooltip-success);
+}
+
+/* Para tooltips bottom, la flecha apunta hacia arriba */
+.tooltip-bottom.tooltip-info::before {
+    border-bottom-color: var(--tooltip-info);
+    border-top-color: transparent;
+}
+
+.tooltip-bottom.tooltip-warning::before {
+    border-bottom-color: var(--tooltip-warning);
+    border-top-color: transparent;
+}
+
+.tooltip-bottom.tooltip-success::before {
+    border-bottom-color: var(--tooltip-success);
+    border-top-color: transparent;
+}
+
+/* Para tooltips top, la flecha apunta hacia abajo */
+.tooltip-top.tooltip-info::before {
+    border-top-color: var(--tooltip-info);
+    border-bottom-color: transparent;
+}
+
+.tooltip-top.tooltip-warning::before {
+    border-top-color: var(--tooltip-warning);
+    border-bottom-color: transparent;
+}
+
+.tooltip-top.tooltip-success::before {
+    border-top-color: var(--tooltip-success);
+    border-bottom-color: transparent;
+}
+
+/* Show tooltip on hover */
+.tooltip-container:hover .tooltip {
+    visibility: visible;
+    opacity: 1;
+}
+
+/* Multi-line tooltip */
+.tooltip-multiline {
+    white-space: wrap;
+    min-width: 175px;
+    text-align: left;
+}
+
+/* Success/Info/Warning colors */
+.tooltip-info {
+    background-color: var(--tooltip-info);
+}
+
+.tooltip-warning {
+    background-color: var(--tooltip-warning);
+}
+
+.tooltip-success {
+    background-color: var(--tooltip-success);
+}

@@ -1,0 +1,189 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+@import "bootstrap/dist/css/bootstrap.min.css";
+
+
+body, html {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    width: 100vw; 
+    font-family: Arial, sans-serif;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden; 
+    position: fixed; 
+    touch-action: none; 
+    font-family: 'Source Sans Pro', sans-serif;
+}
+
+header {
+    height: 70px;
+    background-color: rgba(255, 255, 255, 0.8);
+    display: flex;
+    align-items: center;
+    padding: 0 20px;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+ 
+header .logo img {
+    height: 50px;
+}
+
+ 
+.auth-container {
+    width: 500px;
+    background-color: rgba(255, 255, 255, 0.9);
+    border-radius: 15px;
+    padding: 40px;
+    box-shadow: 0 4px 12px #BABABA;
+    box-sizing: border-box;
+    margin-top: auto;
+    margin-bottom: auto;
+    align-self: flex-end;
+    margin-right: 50px;
+    max-width: 100%;
+}
+
+ 
+.auth-container .logo-auth {
+    display: flex;
+    justify-content: center;  
+    align-items: center;  
+    text-align: center;
+    width: 100%;
+    margin-bottom: 30px;
+}
+
+.auth-container .logo-auth img {
+    width: 150px;
+    height: auto;
+    display: block;
+    margin: 0 auto;
+}
+ 
+.auth-form .form-group {
+    margin-bottom: 25px;
+}
+
+.auth-form .form-group label {
+    display: block;
+    margin-bottom: 10px;
+    font-weight: bold;
+    color: #333;
+    font-size: 16px;
+}
+
+.auth-form .input-icon {
+    position: relative;
+}
+
+.auth-form .input-icon i {
+    position: absolute;
+    left: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #031227;
+    font-size: 18px;
+}
+
+.auth-form .input-icon input {
+    width: calc(100% - 50px);
+    padding: 14px 14px 14px 50px;
+    border: 1px solid #BC8A55;
+    border-radius: 8px;
+    font-size: 16px;
+    box-sizing: border-box;
+}
+
+ 
+.btn-login {
+    width: 100%;
+    padding: 14px;
+    background-color: #092034;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 18px;
+    cursor: pointer;
+    margin-top: 20px;
+    transition: background-color 0.3s ease;
+}
+
+.btn-login:hover {
+    background-color: #0056b3;
+}
+
+ 
+.forgot-password {
+    display: block;
+    text-align: center;
+    margin-top: 20px;
+    color: #BC8A55;
+    font-size: 15px;
+    text-decoration: none;
+}
+
+.forgot-password:hover {
+    text-decoration: underline;
+}
+
+dialog {
+    border: none;
+    border-radius: 12px;
+    padding: 0;
+    width: 450px; 
+    min-height: 180px; 
+    text-align: center;
+    font-family: 'Arial', sans-serif;
+    font-size: 16px;
+    background: #092034; 
+    box-shadow: 0px 4px 15px rgba(0, 0, 0, 0.3);
+    position: relative;
+    transition: opacity 0.3s ease-in-out, transform 0.3s ease-in-out;
+}
+
+.dialog-content {
+    background: #092034;
+    padding: 20px;
+    margin: 10px;
+    border-radius: 10px;
+    text-align: justify;
+    color: #ffffff;
+}
+
+dialog[open] {
+    opacity: 1;
+    transform: scale(1);
+}
+
+dialog::backdrop {
+    background: rgba(0, 0, 0, 0.5);
+}
+
+.close-dialog {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    width: 25px;
+    height: 25px;
+    background: rgb(222, 227, 255);
+    border: none;
+    border-radius: 50%;
+    font-size: 16px;
+    color: rgb(198, 53, 53);
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.3s ease-in-out;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.close-dialog:hover {
+    background: red;
+    color: white;
+}

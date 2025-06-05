@@ -1,0 +1,68 @@
+.autocomplete {
+    position: relative;
+    display: inline-block;
+    width: 100%;
+}
+
+.autocomplete input {
+    display: inline-block;
+    box-sizing: border-box;
+    padding: 12px;
+    font-size: 14px;
+    border: 1px solid #ccc;
+    border-radius: 10px;
+    margin: 0;
+    width: 100%;
+    text-overflow: ellipsis;
+}
+
+.autocomplete input[type=text] {
+    background-color: #fafafa;
+}
+
+.autocomplete-items {
+    position: absolute;
+    border: 1px solid #fff;
+    border-radius: 10px;
+    border-bottom: none;
+    border-top: none;
+    z-index: 99;
+    top: 100%;
+    left: 0;
+    right: 0;
+}
+
+.autocomplete-items div {
+    font-family: 'Poppins';
+    padding: 10px;
+    cursor: pointer;
+    background-color: #fff;
+    border-bottom: 1px solid #d4d4d4;
+    border-left: 1px solid #d4d4d4;
+    border-right: 1px solid #d4d4d4;
+    white-space: nowrap;        /* No permite que el texto se divida en varias líneas */
+    overflow: hidden;           /* Oculta lo que se desborda */
+    text-overflow: ellipsis;    /* Muestra "..." si el texto es muy largo */
+    max-width: 100%;
+}
+
+.autocomplete-items div:first-child {
+    border-top-left-radius: 10px;
+    border-top-right-radius: 10px;
+    border-top: 1px solid #d4d4d4;
+}
+
+.autocomplete-items div:last-child {
+    border-bottom-left-radius: 10px;
+    border-bottom-right-radius: 10px;
+}
+
+.autocomplete-items div:hover {
+    background-color: #72b9ab;
+    color: #ffffff;
+}
+
+.autocomplete-items div.autocomplete-active {
+    background-color: #88D7C7;
+    color: #ffffff;
+}

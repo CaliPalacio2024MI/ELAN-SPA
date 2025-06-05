@@ -1,0 +1,190 @@
+/* ----- Estilos form ----- */
+
+.main-container {
+    padding: 20px;
+}
+
+.header {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 60px;
+    min-height: 40px;
+}
+
+.header h2 {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    text-align: center;
+    font-size: 24px;
+    margin: 10px;
+}
+
+form {
+    display: flex;
+    flex-direction: row;
+    width: 100%;
+    gap: 20px;
+}
+
+.form {
+    flex-direction: column;
+}
+
+.filter {
+    display: flex;
+    flex-direction: row;
+    width: 100%;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+}
+
+label {
+    font-size: 14px;
+    color: #555;
+    padding: 3px 0;
+}
+
+input {
+    padding: 12px;
+    font-size: 14px;
+    background-color: #fafafa;
+    border: 1px solid #ccc;
+    border-radius: 10px;
+    width: 100%;
+}
+
+input:focus {
+    border-color: #3989b5;
+    outline: none;
+}
+
+input[readonly] {
+    background-color: #f5f5f5;
+}
+
+input.input-filter {
+    box-sizing: border-box;
+    padding: 0 10px;
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+    border-right: none;
+}
+
+button.input-filter {
+    box-sizing: border-box;
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+    border-left: none;
+    padding-right: 15px;
+}
+
+/* ----- Estilos tablas ----- */
+
+.table-margin {
+    background-color: #fff;
+    border: none;
+    border-radius: 10px;
+    padding: 25px 25px 25px 25px;
+    margin-top: 20px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+table {
+    border-collapse: collapse;
+    width: 100%;
+}
+
+table tr {
+    border-bottom: 1px solid rgba(0, 0, 0, 0.15);
+    height: 3rem;
+}
+
+/* table tr:nth-child(odd) {
+    background-color: rgba(var(--primary1-rgb), 0.2);
+} */
+
+table th {
+    background-color: var(--primary3);
+    color: #fff;
+    height: 4rem;
+    font-weight: 900;
+    padding: 8px;
+    border: none;
+    text-align: left;
+}
+
+table th:first-child {
+    border-top-left-radius: 2px;
+}
+
+table th:last-child {
+    border-top-right-radius: 2px;
+}
+
+table td {
+    color: #555;
+    font-weight: 400;
+    padding: 6px;
+    border: none;
+    text-align: left;
+}
+
+table input, table button {
+    box-sizing: border-box;
+    background-color: transparent;
+    border: none;
+    width: 100%;
+}
+
+table button {
+    height: calc(3rem - 12px);;
+    cursor: pointer;
+    min-width: 35px;
+}
+
+table td.td-readonly {
+    user-select: none;
+}
+
+table tbody tr:hover {
+    background-color: rgba(var(--primary1-rgb), 0.2);
+}
+
+/* ----- Estilos modal ----- */
+
+.new-articulo-container {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    width: 100%;
+    padding: 0 30px 5px 30px;
+}
+
+.input-new-articulo {
+    width: 100%;
+}
+
+.label-new-articulo {
+    font-size: 14px;
+    font-weight: 800;
+    padding: 0;
+    text-align: left;
+    width: 100%;
+}
+
+.family-group {
+    background-color: rgba(9,32,52, 0.2);
+    padding: 0px 20px;
+    border-radius: 10px;
+    width: 300px;
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+}

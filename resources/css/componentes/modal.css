@@ -1,0 +1,252 @@
+
+/* ----- Modal Mensaje ----- */
+
+.modal-mensaje {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 9999;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    opacity: 0;
+    pointer-events: none;
+    /* Para evitar interacciones cuando está oculto */
+    transition: opacity 0.3s ease;
+    /* Animación de cortina */
+}
+
+.modal-mensaje.mostrar {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.modal-mensaje-contenido {
+    background-color: #fff;
+    padding: 30px;
+    width: auto;
+    max-width: 500px;
+    position: absolute;
+    top: 10%;
+    border-radius: 10px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+    opacity: 0;
+    /* Empieza invisible */
+    transform: scale(0.8);
+    /* Escala inicial pequeña */
+    transition: opacity 0.3s ease, transform 0.3s ease;
+    /* Animación */
+}
+
+.modal-mensaje-contenido.mostrar {
+    opacity: 1;
+    /* Hace visible el modal */
+    transform: scale(1);
+    /* Escala normal */
+}
+
+.modal-mensaje-header {
+    justify-content: center;
+    text-align: center;
+    cursor: default;
+}
+
+.modal-mensaje-header h2 {
+    margin: 0;
+    font-size: 22px;
+    text-align: center;
+}
+
+.modal-mensaje-body {
+    padding: 15px 0;
+    font-size: 16px;
+    text-align: center;
+    cursor: default;
+    white-space: normal;
+    overflow-y: auto;
+    max-height: 600px;
+    max-width: 100%;
+    word-wrap: break-word;
+}
+
+.modal-mensaje-body p {
+    font-size: 16px;
+}
+
+.modal-mensaje-footer {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: default;
+}
+
+/* ----- Modal Slot ----- */
+
+.modal-slot {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 9997;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    opacity: 0;
+    pointer-events: none;
+    /* Para evitar interacciones cuando está oculto */
+    transition: opacity 0.3s ease;
+    /* Animación de cortina */
+}
+
+.modal-slot.mostrar {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.modal-slot-contenido {
+    background-color: #fff;
+    padding: 20px;
+    width: auto;
+    min-width: 350px;
+    max-width: 900px;
+    max-height: 90vh;
+    position: absolute;
+    border-radius: 10px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+    opacity: 0;
+    /* Empieza invisible */
+    transform: scale(0.8) translate(0, -5%);
+    /* Escala inicial pequeña */
+    transition: opacity 0.3s ease, transform 0.3s ease;
+    /* Animación */
+}
+
+.modal-slot-contenido.mostrar {
+    opacity: 1;
+    /* Hace visible el modal */
+    transform: scale(1) translate(0, -5%);
+    /* Escala normal */
+}
+
+.modal-slot-header {
+    justify-content: center;
+    text-align: center;
+    cursor: default;
+    background-color: #092034;
+    padding: 10px 20px;
+    border-radius: 10px 10px 0 0;
+}
+
+.modal-slot-header h2 {
+    color: white;
+}
+
+.modal-slot-body {
+    padding: 25px 0 15px 0;
+    font-size: 16px;
+    text-align: center;
+    overflow-y: auto;
+    max-height: 65vh;
+}
+
+.modal-slot-footer {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: default;
+    gap: 20px;
+}
+
+/* ----- Modal Confirmar ----- */
+
+.modal-confirmar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 9998;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    opacity: 0;
+    pointer-events: none;
+    /* Para evitar interacciones cuando está oculto */
+    transition: opacity 0.3s ease;
+    /* Animación de cortina */
+}
+
+.modal-confirmar.mostrar {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.modal-confirmar-contenido {
+    background-color: #fff;
+    padding: 20px;
+    width: auto;
+    min-width: 350px;
+    max-width: 900px;
+    position: absolute;
+    border-radius: 10px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+    opacity: 0;
+    /* Empieza invisible */
+    transform: scale(0.8) translate(0, -5%);
+    /* Escala inicial pequeña */
+    transition: opacity 0.3s ease, transform 0.3s ease;
+    /* Animación */
+}
+
+.modal-confirmar-contenido.mostrar {
+    opacity: 1;
+    /* Hace visible el modal */
+    transform: scale(1) translate(0, -5%);
+    /* Escala normal */
+}
+
+.modal-confirmar-header {
+    justify-content: center;
+    text-align: center;
+    cursor: default;
+    padding: 10px 20px;
+}
+
+.modal-confirmar-header h2 {
+    font-size: 22px;
+    margin: 20px 0 25px 0;
+}
+
+.modal-confirmar-footer {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: default;
+    gap: 20px;
+}
+
+/* ----- Botones ----- */
+
+.btn {
+    background-color: var(--primary2);
+    color: white;
+    border: none;
+    padding: 0px 15px;
+    border-radius: 25px;
+    cursor: pointer;
+    user-select: none;
+    min-width: 150px;
+    transition: background-color 0.3s;
+    outline: none;
+    display: flex;
+    align-items: center;
+    font-size: 14px;
+    height: 40px;
+    text-decoration: none;
+}

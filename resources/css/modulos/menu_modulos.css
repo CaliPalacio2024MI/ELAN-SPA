@@ -1,0 +1,146 @@
+body {
+    margin: 0;
+    font-family: 'Kumbh Sans', sans-serif;
+    background-color: #FFFFFF;
+}
+
+.page-header {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 60px;
+    background-color: #ffffff;
+    color: #FFFFFF;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 20px;
+    box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
+    z-index: 1000;
+}
+
+.header-logo {
+    height: 50px; 
+    width: auto; 
+    margin-right: 20px; 
+    margin-top: 10px;
+    margin-bottom: 10px;
+}
+
+.content {
+    margin-top: 80px;
+    margin-left: 0;
+    width: 100%;
+    transition: margin-left 0.3s ease, width 0.3s ease;
+}
+
+.button-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: calc(100vh - 60px);
+    gap: 30px;
+    overflow: hidden;
+    margin-top: -70px; 
+}
+
+.area-button {
+    background-color: #071829;
+    border-radius: 12px;
+    padding: 20px;
+    border: none;
+    color: #FFFFFF;
+    cursor: pointer;
+    width: 15%;
+    max-width: 300px; 
+    aspect-ratio: 1 / 1; 
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
+    transition: transform 0.2s;
+}
+
+.area-button:hover {
+    transform: translateY(-5px);
+}
+
+.area-button img {
+    max-width: 70%; 
+    max-height: 70%;
+    object-fit: contain;
+}
+
+.menu-wrapper.open ~ .content {
+    margin-left: 250px; 
+    width: calc(100% - 260px); 
+}
+
+.contenedor-imagen {
+    position: relative;
+    display: flex;
+    justify-content: center;
+}
+
+.contenedor-imagen img {
+    margin-top: -120px; 
+    width: 150px; 
+    height: auto;
+    border-radius: 12px; 
+}
+
+.settings-btn {
+    background-color: transparent;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    position: absolute;
+    left: 10px; 
+    top: 10px; 
+}
+
+.settings-btn img {
+    width: 50px;
+    height: 40px;
+}
+
+.settings-menu {
+    position: absolute;
+    top: 60px;  
+    left: 10px;
+    background-color: #F7F4F2;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    border-radius: 8px;
+    width: 150px;
+    padding: 8px 0;
+    display: none;
+    z-index: 1000;
+}
+
+.settings-menu.open {
+    display: block;
+}
+
+.settings-menu form button {
+    background-color: #BC8A55;
+    border: none;
+    border-radius: 8px;
+    color: #FFFFFF;
+    padding: 10px 0;
+    width: 90%;
+    margin: 5px auto;
+    display: block;
+    cursor: pointer;
+    text-align: center;
+    transition: background-color 0.3s ease;
+}
+
+.settings-menu form button:hover {
+    background-color: #D09D6A;
+}
+
+.menu-btn {
+    border: none;
+}
+

@@ -1,0 +1,62 @@
+/* ----- Envoltura principal ----- */
+.select-wrapper {
+    box-sizing: border-box;
+    position: relative;
+    display: flex;
+    width: 100%;
+}
+
+/* ----- Estilo del contenedor del select ----- */
+.select-dropdown {
+    width: 100%;
+    cursor: pointer;
+    background-color: #fff;
+}
+
+/* ----- Estilo de la flecha ----- */
+.select-arrow {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    pointer-events: none;
+    color: #888;
+}
+
+/* ----- Estilo del contenedor de opciones ----- */
+.select-items {
+    position: absolute;
+    z-index: 99;
+    top: 100%;
+    left: 0;
+    right: 0;
+    max-height: 250px;
+    overflow-y: auto;
+    background-color: #fafafa;
+    border: 1px solid #ccc;
+    border-top: none;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* ----- Estilo de las opciones ----- */
+.select-items div {
+    padding: 10px;
+    cursor: pointer;
+}
+
+/* ----- Estilo de las opciones al pasar el mouse ----- */
+.select-items div:hover {
+    background-color: #fafafa;
+    background-color: var(--primary3) !important;
+    color: white !important;
+}
+
+/* ----- Estilo de la opción seleccionada ----- */
+.select-active {
+    background-color: #fafafa !important;
+}
+
+/* ----- Estilo de la opción seleccionada ----- */
+.select-items .selected {
+    background-color: #fafafa;
+}

@@ -1,0 +1,133 @@
+body {
+    font-family: 'Kumbh Sans', sans-serif;
+    background-color: #f8f8f8;
+    margin: 0;
+    padding: 0;
+}
+
+.container {
+    max-width: 1000px;
+    margin: 20px auto 40px auto;
+    background-color: #ffffff;
+    padding: 20px 30px 30px 30px;
+    border-radius: 12px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    position: relative;
+}
+
+.container .back-button {
+    position: absolute;
+    left: 20px;
+    top: 15px;
+    font-size: 20px;
+    background: none;
+    border: none;
+    color: #092034;
+    cursor: pointer;
+}
+
+h2 {
+    text-align: center;
+    margin-bottom: 20px;
+    color: #092034;
+    font-weight: bold;
+    font-size: 22px;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    background-color: #fff;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+    font-size: 14px;
+}
+
+th, td {
+    border: 1px solid #ddd;
+    padding: 4px 6px;
+    text-align: center;
+    vertical-align: middle;
+}
+
+thead {
+    background-color: #092034;
+    color: white;
+}
+
+tbody tr:nth-child(even) {
+    background-color: #fafafa;
+}
+
+tbody tr:hover {
+    background-color: #f3e3d0;
+}
+
+input[type="checkbox"] {
+    transform: scale(1.1);
+    cursor: pointer;
+}
+
+.mt-4 {
+    margin-top: 30px;
+    text-align: center;
+    font-size: 14px;
+}
+
+.mt-4 button[type="submit"],
+.mt-4 a {
+    background-color: #BC8A55;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    margin: 0 10px;
+    border-radius: 6px;
+    font-weight: bold;
+    cursor: pointer;
+    text-decoration: none;
+    transition: background 0.3s ease;
+}
+
+.mt-4 button[type="submit"]:hover,
+.mt-4 a:hover {
+    background-color: #092034;
+    color: white;
+}
+
+
+button[type="submit"],
+a[href*="anfitriones.index"] {
+    background-color: #BC8A55;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    margin-right: 10px;
+    border-radius: 6px;
+    font-weight: bold;
+    cursor: pointer;
+    text-decoration: none;
+    transition: background 0.3s ease;
+}
+
+button[type="submit"]:hover,
+a[href*="anfitriones.index"]:hover {
+    background-color: #092034;
+    color: white;
+}
+
+thead button,
+tbody button {
+    background: transparent;
+    border: none;
+    color: #ffffff;
+    font-size: 16px;
+    margin-left: 5px;
+    cursor: pointer;
+}
+
+thead button:hover,
+tbody button:hover {
+    color: #F3E3D0;
+    transform: none;
+}

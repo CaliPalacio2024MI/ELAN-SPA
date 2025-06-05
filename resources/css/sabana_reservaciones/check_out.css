@@ -1,0 +1,172 @@
+/* ======= Contenedor principal del formulario ======= */
+form {
+  background-color: #fff;
+  border-radius: 16px;
+  padding: 2.5rem;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.05);
+  margin: 0 auto;
+  max-width: 960px;
+}
+
+/* ======= Título centrado ======= */
+h1, h3 {
+  text-align: center;
+  color: #092034;
+  font-weight: 700;
+  margin-bottom: 1.5rem;
+}
+
+/* ======= Contenedor en 2 columnas (horizontal) ======= */
+.detalle-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 2rem;
+  margin-bottom: 2rem;
+  flex-wrap: wrap;
+}
+
+.detalle-box {
+  flex: 1;
+  background: #fdfdfd;
+  border: 1px solid #eee;
+  padding: 1.2rem 1.5rem;
+  border-radius: 12px;
+  min-width: 280px;
+}
+
+.detalle-box h3 {
+  text-align: left;
+  margin-bottom: 1rem;
+  font-size: 1.1rem;
+  border-left: 5px solid #BC8A55;
+  padding-left: 10px;
+  color: #092034;
+}
+
+/* ======= Etiquetas e inputs ======= */
+label {
+  display: block;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 4px;
+}
+
+input[type="text"],
+input[type="number"],
+select {
+  width: 100%;
+  padding: 10px;
+  font-size: 15px;
+  border-radius: 10px;
+  border: 2px solid #ccc;
+  background-color: #fff;
+  color: #333;
+  box-sizing: border-box;
+  margin-bottom: 8px;
+}
+
+input:focus,
+select:focus {
+  border-color: #bae3ef;
+  outline: none;
+}
+
+/* ======= Grupo compacto de pago (sin espacios grandes) ======= */
+.pago-compacto section {
+  margin-bottom: 0.8rem;
+}
+
+/* ============================
+   TABLA DE CARGOS - CHECKOUT
+============================= */
+
+.checkout-table-container {
+    width: 100%;
+    margin-top: 1rem;
+    overflow-x: auto;
+}
+
+.checkout-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: white;
+    border-radius: 5px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+}
+
+.checkout-table thead {
+    background-color: #092034;
+    color: white;
+    font-weight: bold;
+}
+
+.checkout-table th,
+.checkout-table td {
+    padding: 12px;
+    text-align: center;
+    border-bottom: 1px solid #ddd;
+    font-size: 14px;
+}
+
+.checkout-table tbody tr:hover {
+    background-color: #dbe2e8;
+}
+
+.checkout-table tfoot td {
+    background-color: #f4f4f4;
+    font-weight: bold;
+}
+
+/* ======= Botones específicos ======= */
+.btn-guardar {
+  text-align: center;
+  margin-top: 2rem;
+}
+
+.btn-cobro {
+  background-color: #BC8A55;
+  color: white;
+  padding: 12px 28px;
+  border: none;
+  border-radius: 10px;
+  font-size: 16px;
+  font-weight: bold;
+  cursor: pointer;
+  margin-right: 1rem;
+}
+
+.btn-cobro:hover {
+  background-color: #092034;
+}
+
+.btn-cobro-cancelar {
+  background-color: #e0e0e0;
+  color: #444;
+  padding: 12px 28px;
+  border: none;
+  border-radius: 10px;
+  font-size: 16px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.btn-cobro-cancelar:hover {
+  background-color: #cfcfcf;
+}
+
+/* ======= Responsive ======= */
+@media (max-width: 768px) {
+  .detalle-row {
+    flex-direction: column;
+  }
+
+  form {
+    padding: 1.5rem;
+  }
+
+  table th, table td {
+    font-size: 13px;
+    padding: 10px;
+  }
+}

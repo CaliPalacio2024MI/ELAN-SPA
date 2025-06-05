@@ -1,0 +1,175 @@
+/* ----- Estilos form ----- */
+
+.main-container {
+    padding: 20px;
+}
+
+h2 {
+    text-align: center;
+}
+
+form {
+    display: flex;
+    flex-direction: row;
+    width: 100%;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+}
+
+label {
+    font-size: 14px;
+    color: #555;
+    padding: 3px 0;
+}
+
+input {
+    padding: 12px;
+    font-size: 14px;
+    border: 1px solid #ccc;
+    border-radius: 10px;
+    width: 100%;
+}
+
+input:focus {
+    border-color: #3989b5;
+    outline: none;
+}
+
+input[readonly] {
+    background-color: #f5f5f5;
+}
+
+.btn-submit {
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    background-color: #05755F;
+    color: white;
+    border: none;
+    padding: 0px 15px;
+    font-size: 14px;
+    height: 40px;
+    cursor: pointer;
+    border-radius: 50px;
+    transition: background-color 0.3s;
+    user-select: none;
+}
+
+button.btn-submit:hover {
+    background-color: var(--primary1);
+}
+
+button:disabled {
+    cursor: not-allowed;
+    opacity: 0.4;
+}
+
+input.input-button {
+    box-sizing: border-box;
+    height: 45px;
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+    border-right: none;
+}
+
+button.input-button {
+    box-sizing: border-box;
+    height: 45px;
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+    border-left: none;
+    padding-right: 15px;
+}
+
+.header {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 60px;
+}
+
+/* ----- Estilos tablas ----- */
+
+.table-margin {
+    background-color: #fafafa;
+    border: 1px solid rgba(0, 0, 0, 0.15);
+    border-radius: 10px;
+    padding: 10px 25px 25px 25px;
+    margin-top: 20px;
+}
+
+table {
+    border-collapse: collapse;
+    width: 100%;
+}
+
+table tr {
+    border-bottom: 1px solid rgba(0, 0, 0, 0.15);
+    height: 3rem;
+}
+
+table tr:nth-child(odd) {
+    background-color: rgba(239, 187, 43, 0.3);
+    color: #555;
+}
+
+table th {
+    background-color: #fafafa;
+    color: #555;
+    font-weight: 900;
+    padding: 6px;
+    border: none;
+    text-align: left;
+}
+
+table td {
+    color: #555;
+    font-weight: 400;
+    padding: 6px;
+    border: none;
+    text-align: left;
+}
+/* 
+table td.td-editable {
+    padding: 0px;
+} */
+
+table input, table button {
+    box-sizing: border-box;
+    background-color: transparent;
+    border: none;
+    width: 100%;
+}
+
+table button {
+    height: 3rem;
+    cursor: pointer;
+    min-width: 35px;
+}
+/* 
+table button:hover {
+    background-color: rgba(var(--primary5-rgb), 0.4);
+} */
+
+table td.td-readonly {
+    user-select: none;
+}
+
+table tbody tr:hover {
+    background-color: rgba(239, 187, 43, 0.5);
+}
+
+/* ----- Estilos modal ----- */
+
+.btn-confirm-custom {
+    background-color: var(--primary3);
+}
+
+.btn-cancel-custom {
+    background-color: var(--primary4);
+}
