@@ -51,10 +51,10 @@
             @endif
                 
             {{-- Menú: para salón de belleza, según rol y departamento --}}
-            {{-- @if (in_array(Auth::user()->rol, ['master', 'administrador', 'recepcionista']) ||
+             @if (in_array(Auth::user()->rol, ['master', 'administrador', 'recepcionista']) ||
                 (Auth::user()->rol === 'anfitrion' && Auth::user()->departamento === 'salon de belleza'))
                 <li><a href="#"><i class="fas fa-spa"></i><span> Salón de Belleza</span></a></li>
-            @endif --}}
+            @endif 
                 
                 
             {{-- Menú: para la boutique, según rol y departamento --}}
