@@ -204,11 +204,15 @@
 
                         <div class="mb-3">
                             <label for="departamento" class="form-label">Departamento</label>
-                            <select class="form-select {{ $errors->create->has('departamento') ? 'is-invalid' : '' }}" id="departamento" name="departamento" required>
-                                <option value="spa" {{ (!$fromEdit && old('departamento') == 'spa') ? 'selected' : '' }}>Spa</option>
-                                <option value="gym" {{ (!$fromEdit && old('departamento') == 'gym') ? 'selected' : '' }}>Gimnasio</option>
-                                <option value="valet" {{ (!$fromEdit && old('departamento') == 'valet') ? 'selected' : '' }}>Valet</option>
-                                <option value="salon de belleza" {{ (!$fromEdit && old('departamento') == 'salon de belleza') ? 'selected' : '' }}>Salón de Belleza</option>
+                            <select class="form-select {{ $errors->create->has('departamento') ? 'is-invalid' : '' }}" id="departamento" name="departamento">
+                                <option value="" disabled selected>Selecciona un departamento</option>
+                                @forelse ($departamentosDisponibles as $departamento)
+                                    <option value="{{ $departamento }}" {{ (!$fromEdit && old('departamento') == $departamento) ? 'selected' : '' }}>
+                                        {{ $departamento }}
+                                    </option>
+                                @empty
+                                    <option value="" disabled>No hay departamentos disponibles.</option>
+                                @endforelse
                             </select>
                             @error('departamento', 'create')
                                 <div class="invalid-feedback">{{ $message }}</div>
@@ -344,11 +348,15 @@
                     
                     <div class="mb-3">
                         <label for="edit_departamento" class="form-label">Departamento</label>
-                        <select class="form-select {{ $errors->edit->has('departamento') ? 'is-invalid' : '' }}" id="edit_departamento" name="departamento" required>
-                            <option value="spa">Spa</option>
-                            <option value="gym">Gimnasio</option>
-                            <option value="valet">Valet</option>
-                            <option value="salon de belleza">Salón de Belleza</option>
+                        <select class="form-select {{ $errors->edit->has('departamento') ? 'is-invalid' : '' }}" id="edit_departamento" name="departamento">
+                            <option value="" disabled>Selecciona un departamento</option>
+                            @forelse ($departamentosDisponibles as $departamento)
+                                <option value="{{ $departamento }}">
+                                    {{ $departamento }}
+                                </option>
+                            @empty
+                                <option value="" disabled>No hay departamentos disponibles.</option>
+                            @endforelse
                         </select>
                         @if ($errors->edit->has('departamento'))
                             <div class="invalid-feedback">{{ $errors->edit->first('departamento') }}</div>
@@ -441,4 +449,3 @@
 @endif
     
 @endsection
-
