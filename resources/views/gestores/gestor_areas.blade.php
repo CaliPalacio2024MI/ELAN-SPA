@@ -34,7 +34,7 @@
 @section('content')
 <div class="main-container">
     <div class="header">
-        <h2 class="header-title">Gestor de Areas</h2>
+        <h2 class="header-title">Gestor de Áreas</h2>
     </div>
 
    <div class="gestor-layout-container">
@@ -44,7 +44,7 @@
             <table class="tabla-responsive custom-tabla">
                 <thead>
                     <tr>
-                        <th>Departamento</th>
+                        <th>Áreas</th>
                         <th>Anfitriones</th>
                         <th>Especialidades</th>
                         <th>Cabinas relacionadas</th>
@@ -124,12 +124,12 @@
      <div class="formulario-wrapper">
         <div class="card">
         {{-- Formulario para Nuevo Departamento --}}
-        <div class="form-container" style="flex-basis: 200px;">
-            <h5 class="form-title">Nuevo Departamento</h5>
+        <div class="form-container">
+            <h5 class="form-title">Nueva Área</h5>
             <form id="nuevoDepartamentoForm" action="{{ route('areas.store') }}" method="POST">
                 @csrf
                 <div class="mb-3">
-                    <label for="nombre_departamento" class="form-label">Nombre del Departamento</label>
+                    <label for="nombre_departamento" class="form-label">Nombre del Área</label>
                     <input type="text" class="form-control" id="nombre_departamento" name="nombre_departamento" placeholder="Ej: Spa, Salon" required>
                 </div>
 

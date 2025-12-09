@@ -98,7 +98,7 @@
                                 <li><a href="{{ route('cabinas.index') }}"><i class="fas fa-door-closed"></i><span> Cabinas</span></a></li>
                                 <li><a href="{{ route('cliente.index') }}"><i class="fas fa-users"></i><span> Clientes</span></a></li>
                                 <li><a href="{{ route('familias.index') }}"><i class="fas fa-box"></i><span> Familias</span></a></li>
-                                <li><a href="{{ route('areas.index') }}"><i class="fas fa-map-marked"></i><span> Areas</span></a></li>
+                                <li><a href="{{ route('areas.index') }}"><i class="fas fa-map-marked"></i><span> Áreas</span></a></li>
                             @endif
                         </ul>
                     </li>

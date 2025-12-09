@@ -203,15 +203,15 @@
                         </div>
 
                         <div class="mb-3">
-                            <label for="departamento" class="form-label">Departamento</label>
+                            <label for="departamento" class="form-label">Áreas</label>
                             <select class="form-select {{ $errors->create->has('departamento') ? 'is-invalid' : '' }}" id="departamento" name="departamento">
-                                <option value="" disabled selected>Selecciona un departamento</option>
+                                <option value="" disabled selected>Selecciona una área</option>
                                 @forelse ($departamentosDisponibles as $departamento)
                                     <option value="{{ $departamento }}" {{ (!$fromEdit && old('departamento') == $departamento) ? 'selected' : '' }}>
                                         {{ $departamento }}
                                     </option>
                                 @empty
-                                    <option value="" disabled>No hay departamentos disponibles.</option>
+                                    <option value="" disabled>No hay áreas disponibles.</option>
                                 @endforelse
                             </select>
                             @error('departamento', 'create')
