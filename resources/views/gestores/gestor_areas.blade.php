@@ -55,29 +55,35 @@
                 <tbody>
                     @forelse ($departamentos as $d)
                         <tr>
-                            <td>{{ ucfirst($d['departamento']) }}</td>
+                            <td>{{ ucfirst($d['departamento'] ?? '') }}</td>
                             <td>
-                                @if($d['anfitriones']->isEmpty())
+                                @php $anfs = $d['anfitriones'] ?? []; @endphp
+                                @if(empty($anfs) || count($anfs) == 0)
                                     —
                                 @else
-                                    @foreach($d['anfitriones'] as $a)
-                                        {{ $a['nombre'] ?? 'N/D' }}<br>
+                                    @foreach($anfs as $a)
+                                        {{ $a['nombre'] ?? ($a->nombre ?? 'N/D') }}<br>
                                     @endforeach
                                 @endif
                             </td>
                             <td>
-                                @if($d['especialidades']->isEmpty())
+                                @php $esp = $d['especialidades'] ?? collect(); @endphp
+                                @if(empty($esp) || (is_countable($esp) && count($esp) == 0))
                                     —
                                 @else
-                                    {{ implode(', ', $d['especialidades']->toArray()) }}
+                                    @php
+                                        $espArr = is_array($esp) ? $esp : (method_exists($esp,'toArray') ? $esp->toArray() : (array)$esp);
+                                    @endphp
+                                    {{ implode(', ', $espArr) }}
                                 @endif
                             </td>
                             <td>
-                                @if($d['cabinas']->isEmpty())
+                                @php $cabs = $d['cabinas'] ?? []; @endphp
+                                @if(empty($cabs) || count($cabs) == 0)
                                     —
                                 @else
-                                    @foreach($d['cabinas'] as $c)
-                                        {{ $c['nombre'] }}<br>
+                                    @foreach($cabs as $c)
+                                        {{ $c['nombre'] ?? ($c->nombre ?? '') }}<br>
                                     @endforeach
                                 @endif
                             </td>
@@ -85,7 +91,8 @@
                                 @php $activo = $d['activo'] ?? true; @endphp
                                 <span
                                     class="badge toggle-estado {{ $activo ? 'bg-success' : 'bg-danger' }}"
-                                    data-departamento="{{ $d['departamento'] }}"
+                                    data-id="{{ $d['id'] ?? '' }}"
+                                    data-nombre="{{ $d['departamento'] ?? '' }}"
                                     style="cursor: pointer;"
                                 >
                                     {{ $activo ? 'Activo' : 'Inactivo' }}
@@ -93,19 +100,18 @@
                             </td>
                             <td>
                                 <div class="action-buttons">
-                                    <button type="button" class="btn btn-warning btn-edit"
+                                    <button type="button" class="btn btn-warning btn-edit" 
                                         data-bs-toggle="modal"
                                         data-bs-target="#editDepartamentoModal"
-                                        data-departamento="{{ $d['departamento'] }}">
+                                        data-id="{{ $d['id'] ?? '' }}"
+                                        data-nombre="{{ $d['departamento'] ?? '' }}">
                                         <i class="fa-solid fa-pen-to-square icono-accion-pequeno"></i>
                                     </button>
 
-                                    <form action="{{ route('areas.destroy', ['departamento' => $d['departamento']]) }}" method="POST" class="d-inline form-delete" id="delete-form-{{ $d['departamento'] }}">
+                                    <form action="{{ route('areas.destroy', $d['id'] ?? ($d['departamento'] ?? '')) }}" method="POST" class="d-inline form-delete">
                                         @csrf @method('DELETE')
-                                        {{-- Se cambia type="submit" a type="button" y se añaden data-attributes --}}
                                         <button type="button" class="btn btn-danger btn-delete" data-bs-toggle="modal" data-bs-target="#alertModal"
-                                                class="btn btn-danger btn-delete"                                               
-                                                data-departamento-nombre="{{ ucfirst($d['departamento']) }}">
+                                            data-departamento-nombre="{{ ucfirst($d['departamento'] ?? '') }}">
                                             <i class="fa-solid fa-delete-left icono-accion-pequeno" style="color: #ac0505;"></i>
                                         </button>
                                     </form>
@@ -175,7 +181,7 @@
                     <form id="editDepartamentoForm" method="POST" action="">
                         @csrf
                         @method('PUT') {{-- Laravel simula PUT a través de un campo _method --}}
-                        <div class="mb-3">
+                        <div class="mb-3"> 
                             <label for="edit_nombre_departamento" class="form-label">Nombre del Departamento</label>
                             <input type="text" class="form-control" id="edit_nombre_departamento" name="nombre_departamento" required>
                         </div>
@@ -225,6 +231,46 @@
                     confirmBtn.onclick = () => form.submit();
                 });
             }
+
+            // Manejo del modal de edición y toggle de estado
+            // Editar: poblar el formulario con los datos del departamento
+            document.querySelectorAll('.btn-edit').forEach(btn => {
+                btn.addEventListener('click', function () {
+                    const id = this.dataset.id || '';
+                    const nombre = this.dataset.nombre || '';
+                    const form = document.getElementById('editDepartamentoForm');
+                    document.getElementById('edit_nombre_departamento').value = nombre;
+
+                    if (id) {
+                        form.action = `/areas/${id}`;
+                    } else {
+                        // Si no hay id, usamos el nombre como identificador en la ruta
+                        form.action = `/areas/${encodeURIComponent(nombre)}`;
+                    }
+                });
+            });
+
+            // Toggle activo/inactivo con fetch PATCH
+            document.querySelectorAll('.toggle-estado').forEach(el => {
+                el.addEventListener('click', function () {
+                    const id = this.dataset.id || '';
+                    const nombre = this.dataset.nombre || '';
+                    const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '{{ csrf_token() }}';
+                    const target = id ? `/areas/${id}/toggle` : `/areas/${encodeURIComponent(nombre)}/toggle`;
+
+                    fetch(target, {
+                        method: 'PATCH',
+                        headers: {
+                            'X-CSRF-TOKEN': token,
+                            'Accept': 'application/json',
+                            'Content-Type': 'application/json'
+                        }
+                    }).then(resp => {
+                        if (resp.ok) window.location.reload();
+                        else alert('No se pudo cambiar el estado');
+                    }).catch(() => alert('Error en la petición'));
+                });
+            });
         });
     </script>
     @include('components.session-alert')
