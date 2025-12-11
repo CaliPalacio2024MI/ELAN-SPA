@@ -56,7 +56,12 @@ class AreasController extends Controller
     // Cabinas reales del spa (FALTABA ESTO)
     $cabinas = Cabina::where('spa_id', $spaId)->get();
 
-    // Departamentos reales en BD
+    // Agrupar operativos por departamento normalizado
+    $gruposOperativos = $operativos->groupBy(function ($item) {
+        return \Illuminate\Support\Str::ascii(strtolower(trim($item->departamento ?? '')));
+    });
+
+    // Departamentos reales en BD - INCLUIR TODOS, incluso los sin operativos
     $departamentosBD = Departamento::where('spa_id', $spaId)->get();
 
     // Convertir departamentos BD al formato del index
@@ -100,14 +105,18 @@ class AreasController extends Controller
             'nombre' => $c->nombre
         ])->values();
 
-        return [
-            'departamento'  => $d->nombre,
-            'anfitriones'   => $anfitriones,
-            'especialidades'=> $especialidades,
-            'cabinas'       => $cabinasRelacionadas,
-            'activo'        => $d->activo,
-        ];
+            return [
+                'id'            => $d->id,
+                'departamento'  => $d->nombre,
+                'anfitriones'   => $anfitriones,
+                'especialidades'=> $especialidades,
+                'cabinas'       => $cabinasRelacionadas,
+                'activo'        => $d->activo,
+            ];
     });
+
+    // NO añadir departamentos infer­idos que NO estén en BD
+    // Ahora todos los departamentos deben estar en la BD gracias al seeder BaseDepartamentosSeeder
 
     return view('gestores.gestor_areas', [
         'departamentos' => $departamentos,
@@ -166,19 +175,27 @@ class AreasController extends Controller
         if (!$spaId) {
             return back()->withErrors(['error' => 'No se pudo determinar el spa actual.']);
         }
-        
-        // Buscar el departamento por el nombre original en el spa actual
-        $departamentoAActualizar = Departamento::where('nombre', $departamento)
-                                               ->where('spa_id', $spaId)
-                                               ->first();
-        
-        if ($departamentoAActualizar) {
-            $departamentoAActualizar->nombre = $request->nombre_departamento;
-            $departamentoAActualizar->save();
+        // Si se recibe un id numérico, buscar por id; si no, buscar por nombre
+        if (is_numeric($departamento)) {
+            $depto = Departamento::where('id', intval($departamento))->where('spa_id', $spaId)->first();
+        } else {
+            $depto = Departamento::where('nombre', $departamento)->where('spa_id', $spaId)->first();
+        }
+
+        if ($depto) {
+            $depto->nombre = $request->nombre_departamento;
+            $depto->save();
             return redirect()->route('areas.index')->with('success', 'Departamento actualizado con éxito.');
         }
-        
-        return back()->withErrors(['error' => 'No se encontró el departamento para actualizar.']);
+
+        // Si no existía como registro persistente, crearlo para el spa actual
+        Departamento::create([
+            'nombre' => $request->nombre_departamento,
+            'spa_id' => $spaId,
+            'activo' => true,
+        ]);
+
+        return redirect()->route('areas.index')->with('success', 'Departamento creado y actualizado con éxito.');
     }
 
     /**
@@ -190,17 +207,16 @@ class AreasController extends Controller
         if (!$spaId) {
             return back()->withErrors(['error' => 'No se pudo determinar el spa actual.']);
         }
+        if (is_numeric($departamento)) {
+            $depto = Departamento::where('id', intval($departamento))->where('spa_id', $spaId)->firstOrFail();
+            $depto->delete();
+            return redirect()->route('areas.index')->with('success', 'Departamento eliminado con éxito.');
+        }
 
-        // Se busca el departamento por nombre y spa_id.
-        // Usar firstOrFail es más directo: si no lo encuentra, lanzará una excepción
-        // que podemos capturar o dejar que Laravel maneje (mostrando un error 404).
-        $departamentoAEliminar = Departamento::where('nombre', $departamento)
-                                             ->where('spa_id', $spaId)
-                                             ->firstOrFail();
-
-        if ($departamentoAEliminar) {
-            $departamentoAEliminar->delete();
-            // Si la eliminación es exitosa, redirige con un mensaje de éxito.
+        // Si se pasa un nombre, intentar eliminar el registro persistente que coincida
+        $depto = Departamento::where('nombre', $departamento)->where('spa_id', $spaId)->first();
+        if ($depto) {
+            $depto->delete();
             return redirect()->route('areas.index')->with('success', 'Departamento eliminado con éxito.');
         }
 
@@ -213,7 +229,11 @@ class AreasController extends Controller
     public function toggle($departamento)
     {
         $spaId = session('current_spa_id');
-        $depto = Departamento::where('nombre', $departamento)->where('spa_id', $spaId)->first();
+        if (is_numeric($departamento)) {
+            $depto = Departamento::where('id', intval($departamento))->where('spa_id', $spaId)->first();
+        } else {
+            $depto = Departamento::where('nombre', $departamento)->where('spa_id', $spaId)->first();
+        }
 
         if ($depto) {
             $depto->activo = !$depto->activo;

@@ -16,7 +16,7 @@ class BaseDepartamentosSeeder extends Seeder
     public function run()
     {
         $spas = Spa::all();
-        $departamentosBase = ['Spa', 'Gimnasio', 'Valet', 'Salón de Belleza'];
+        $departamentosBase = ['Spa', 'Gimnasio', 'Valet', 'Salón de Belleza', 'Boutique'];
 
         foreach ($spas as $spa) {
             foreach ($departamentosBase as $nombreDepartamento) {

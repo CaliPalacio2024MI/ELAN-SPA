@@ -2,17 +2,21 @@
 
 namespace App\Models;
 
-use App\Models\Departamento;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use App\Models\Spa;
 
 class Departamento extends Model
 {
+    use HasFactory;
+
     protected $table = 'departamentos';
 
     protected $fillable = [
-        'spa_id',
         'nombre',
+        'spa_id',
         'activo',
+        'slug',
     ];
 
     public function spa()
