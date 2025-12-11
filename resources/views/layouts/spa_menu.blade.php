@@ -70,13 +70,14 @@
             @endif
 
             {{-- Menú: para el gimnasio, según rol y departamento --}}
-            @if (in_array(Auth::user()->rol, ['master', 'administrador']))
+            @if (in_array(Auth::user()->rol, ['master', 'administrador']) || (Auth::user()->rol === 'anfitrion' && Auth::user()->departamento === 'gym'))
                 <li class="menu-item">
                     <a href="#"><i class="fas fa-dumbbell"></i><span> Gimnasio</span></a>
                     <ul class="submenu">
                         <li><a href="{{ route('gimnasio.reporteo') }}"><i class="fas fa-chart-line"></i><span> Reporteo</span></a></li>
                         <li><a href="{{ route('gimnasio.historial') }}"><i class="fas fa-history"></i><span> Historial</span></a></li>
                         <li><a href="{{ route('gimnasio.qr_code') }}" target="_blank"><i class="fas fa-qrcode"></i><span> Código QR</span></a></li>
+    
                     </ul>
                 </li>
             @endif

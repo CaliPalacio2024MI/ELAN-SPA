@@ -53,9 +53,10 @@
     <h2>GESTIONAR CLIENTES</h2>
 </header>
 
-<div class="botonera-top">
+    <div class="botonera-top">
     <div class="d-flex gap-2">
-        <a href="{{ route('clientes.export') }}" class="btn btns d-flex align-items-center justify-content-center">
+        @php $qs = http_build_query(request()->query()); @endphp
+        <a href="{{ route('clientes.export') }}{{ $qs ? '?'.$qs : '' }}" class="btn btns d-flex align-items-center justify-content-center">
             <i class="fas fa-download"></i>
         </a>
 

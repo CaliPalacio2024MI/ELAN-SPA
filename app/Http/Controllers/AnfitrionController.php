@@ -29,10 +29,38 @@ class AnfitrionController extends Controller
         }
 
         // Obtiene anfitriones del spa excepto rol master, con datos operativos cargados
-        $anfitriones = Anfitrion::where('spa_id', $spa->id)
+        $query = Anfitrion::where('spa_id', $spa->id)
             ->where('rol', '!=', 'master')
-            ->with('operativo')
-            ->get();
+            ->with('operativo');
+
+        // Filtrado por término de búsqueda (busca en RFC, nombre, apellidos, rol, departamento y categorias)
+        $search = trim($request->query('search', ''));
+        if ($search !== '') {
+            $query->where(function ($q) use ($search) {
+                // Campos directos en la tabla anfitriones
+                $q->where('RFC', 'like', "%{$search}%")
+                    ->orWhere('nombre_usuario', 'like', "%{$search}%")
+                    ->orWhere('apellido_paterno', 'like', "%{$search}%")
+                    ->orWhere('apellido_materno', 'like', "%{$search}%")
+                    ->orWhere('rol', 'like', "%{$search}%");
+
+                // Campos dentro de la relación operativo (departamento, clases_actividad JSON)
+                $q->orWhereHas('operativo', function ($oq) use ($search) {
+                    $oq->where('departamento', 'like', "%{$search}%")
+                       ->orWhere('clases_actividad', 'like', "%{$search}%");
+                });
+            });
+        }
+
+        // Filtrado opcional por departamento (ej. 'gym') usando la relación operativo
+        $departamento = trim($request->query('departamento', ''));
+        if ($departamento !== '') {
+            $query->whereHas('operativo', function ($q) use ($departamento) {
+                $q->where('departamento', $departamento);
+            });
+        }
+
+        $anfitriones = $query->get();
 
         // Carga nombres de spas adicionales accesibles para cada anfitrion
         foreach ($anfitriones as $anfitrion) {
@@ -76,12 +104,22 @@ class AnfitrionController extends Controller
             ->filter()
             ->values();
 
+        // Agrupa experiencias por su clase para poblar subtipos (p.ej. masajes, faciales, corporales)
+        $experienciasPorClase = Experience::where('spa_id', $spa->id)
+            ->get()
+            ->groupBy('clase')
+            ->map(function ($grupo) {
+                return $grupo->pluck('nombre')->unique()->values()->all();
+            })
+            ->toArray();
+
         return view('gestores.gestor_anfitriones', [
             'anfitriones' => $anfitriones,
             'spas' => Spa::all(),
             'spasDisponibles' => Spa::where('id', '!=', $spa->id)->get(),
             'todasClases' => $todasClases,
             'clasesDisponibles' => $clasesDisponibles,
+            'experienciasPorClase' => $experienciasPorClase,
         ]);
     }
 

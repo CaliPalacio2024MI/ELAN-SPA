@@ -38,16 +38,16 @@
     <form id="form-adult">
         <div class="aviso-legal">
             <strong>AVISO LEGAL:</strong><br>
-            A través de mi firma, expreso mi voluntad para deslindar a <span style="color: red;">Palacio Mundo
-                Imperial</span> (Organización Ideal, S. de R.L. de C.V.), sus accionistas, directivos, representantes y
+            A través de mi firma, expreso mi voluntad para deslindar a <span style="color: red;">{{ $hotelName }}</span>
+                (Organización Ideal, S. de R.L. de C.V.), sus accionistas, directivos, representantes y
             empleados, a fin de que estén y se mantengan libres, sin carga y no tengan ninguna responsabilidad por
             cualquier lesión corporal, menoscabo o pérdida que resulte como consecuencia inmediata, mediata o remota de
             las rutinas que realice -sean o no con aparatos y/o equipos de entrenamiento-, por ende, asumo la
             responsabilidad de las rutinas que realizo y del uso correcto de los aparatos y equipos de entrenamiento.
             Renunciando a ejercer cualquier acción legal o judicial en contra de ellos por dicha situación.
             <br><br>
-            Through my signature, I express my will to delimit to <span style="color: red;">Palacio Mundo
-                Imperial</span> (Organización Ideal, S. de R.L. de C.V.), its shareholders, directors, representatives
+            Through my signature, I express my will to delimit to <span style="color: red;">{{ $hotelName }}</span>
+                 (Organización Ideal, S. de R.L. de C.V.), its shareholders, directors, representatives
             and employees, so that they are and remain free, without charge and have no responsibility for any bodily
             injury, impairment or loss that results as an immediate, mediate or remote consequence of the routines that
             I carry out, whether or not it be with training devices and / or equipment. Therefore, I assume
@@ -59,6 +59,14 @@
             <label for="nombre_adulto">Nombre completo *</label>
             <input type="text" id="nombre_adulto" name="nombre_huesped" required>
         </div>
+
+        <div class="form-group">
+            <label for="nombre_adulto">Numero de Habitacion *</label>
+            <input type="text" id="nombre_adulto" name="nombre_huesped" required>
+        </div>
+
+        
+
 
         <div class="form-group">
             <label>Firma *</label>
@@ -119,6 +127,8 @@
             <label for="nombre_tutor">Nombre completo del padre/tutor *</label>
             <input type="text" id="nombre_tutor" name="nombre_tutor" required>
         </div>
+
+        
 
         <div class="form-group">
             <label for="telefono_tutor">Teléfono del padre/tutor *</label>
