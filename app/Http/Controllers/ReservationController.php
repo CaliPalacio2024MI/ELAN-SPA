@@ -492,8 +492,8 @@ class ReservationController extends Controller
             $horario = $horarioNormalizado;
 
             // Día en formato sin tildes
-            $diaCarbon = \Carbon\Carbon::parse($data['fecha'])->locale('es'); // Asegurar el locale español
-            $dia = strtolower($diaCarbon->isoFormat('dddd')); // Usar isoFormat para consistencia con el método index
+            \Carbon\Carbon::setLocale('es');
+            $dia = strtolower(\Carbon\Carbon::parse($data['fecha'])->isoFormat('dddd'));
             $dia = str_replace(['á','é','í','ó','ú'], ['a','e','i','o','u'], $dia);
 
             $horaSolicitada = \Carbon\Carbon::parse($data['hora'])->format('H:i');
@@ -565,8 +565,18 @@ class ReservationController extends Controller
         }
 
         // Crear grupo y reservas
+        // --- Calcular o crear el primer cliente del grupo ---
+        $primerClienteId = $reservasValidas[0]['cliente_existente_id'] ?? Client::create([
+          'nombre' => $reservasValidas[0]['nombre_cliente'],
+          'apellido_paterno' => $reservasValidas[0]['apellido_paterno_cliente'],
+          'apellido_materno' => $reservasValidas[0]['apellido_materno_cliente'] ?? null,
+          'correo' => $reservasValidas[0]['correo_cliente'],
+          'telefono' => $reservasValidas[0]['telefono_cliente'],
+          'tipo_visita' => $reservasValidas[0]['tipo_visita_cliente'],
+        ])->id;
+
         $grupo = GrupoReserva::create([
-            'cliente_id' => $reservasValidas[0]['cliente_existente_id'] ?? null,
+            'cliente_id' => $primerClienteId,
         ]);
 
         foreach ($reservasValidas as $i => $data) {

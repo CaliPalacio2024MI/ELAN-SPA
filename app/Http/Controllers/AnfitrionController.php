@@ -10,6 +10,8 @@ use Illuminate\Support\Facades\Log;
 use App\Models\Anfitrion;
 use App\Models\AnfitrionOperativo;
 use App\Models\HorarioAnfitrion;
+use App\Models\Departamento;
+use Illuminate\Validation\Rule;
 use App\Models\Experience;
 
 class AnfitrionController extends Controller
@@ -76,12 +78,21 @@ class AnfitrionController extends Controller
             ->filter()
             ->values();
 
+        // --- INICIO DE CAMBIO ---
+        // Obtener los departamentos disponibles para el SPA actual
+        $departamentosDisponibles = Departamento::where('spa_id', $spa->id)
+            ->where('activo', true)
+            ->orderBy('nombre')
+            ->pluck('nombre');
+        // --- FIN DE CAMBIO ---
+
         return view('gestores.gestor_anfitriones', [
             'anfitriones' => $anfitriones,
             'spas' => Spa::all(),
             'spasDisponibles' => Spa::where('id', '!=', $spa->id)->get(),
             'todasClases' => $todasClases,
             'clasesDisponibles' => $clasesDisponibles,
+            'departamentosDisponibles' => $departamentosDisponibles, // Pasar a la vista
         ]);
     }
 
@@ -95,7 +106,15 @@ class AnfitrionController extends Controller
             'nombre_usuario' => 'required|string|max:255',
             'password' => ['required', 'string', 'min:8', 'regex:/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/'],
             'rol' => 'required|string',
-            'departamento' => 'required|in:spa,gym,valet,salon de belleza',
+            // --- INICIO DE CAMBIO ---
+            // Validación dinámica de departamentos
+            'departamento' => [
+                'required',
+                Rule::in(
+                    Departamento::where('spa_id', session('current_spa_id'))->where('activo', true)->pluck('nombre')
+                )
+            ],
+            // --- FIN DE CAMBIO ---
             'accesos' => 'nullable|array',
             'accesos.*' => 'integer|exists:spas,id',
         ], [
@@ -160,7 +179,16 @@ class AnfitrionController extends Controller
             'nombre_usuario' => 'required|string|max:255',
             'password' => ['nullable', 'string', 'min:8', 'regex:/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/'],
             'rol' => 'required|string',
-            'departamento' => 'required|in:spa,gym,valet,salon de belleza',
+            // --- INICIO DE CAMBIO ---
+            // Validación dinámica de departamentos
+            'departamento' => [
+                'required',
+                Rule::in(
+                    // Usamos el spa_id del anfitrión que se está editando
+                    Departamento::where('spa_id', $anfitrion->spa_id)->where('activo', true)->pluck('nombre')
+                )
+            ],
+            // --- FIN DE CAMBIO ---
             'accesos' => 'nullable|array',
             'accesos.*' => 'integer|exists:spas,id',
             'activo' => 'boolean',

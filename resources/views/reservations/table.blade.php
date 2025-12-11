@@ -106,40 +106,40 @@
                                 </td>
 
                             {{-- Si no hay reserva ni bloqueo --}}
+                          @else
+                           @php
+                            $horario = $horariosAnfitriones[$anfitrion->id] ?? [];
+                            $diaSemana = strtolower(\Carbon\Carbon::parse($fechaSeleccionada)->locale('es')->isoFormat('dddd'));
+                            $diaSemana = str_replace(['á','é','í','ó','ú'], ['a','e','i','o','u'], $diaSemana);
+                            $horarioDelDia = $horario[$diaSemana] ?? [];
+                            $disponible = false;
+                            if (empty($horarioDelDia)) {
+                             echo '<td class="reserva-celda no-disponible" style="background-color: yellow;">SIN HORARIO (' . $diaSemana . ')</td>';
+                             continue;
+                            }
+                           $match = in_array($horaCompleta, $horarioDelDia);
+                           if (!$match) {
+                            $listaHoras = implode(',', $horarioDelDia);
+                            $debug_message = ['bg' => 'red', 'text' => 'No COINCIDE. Buscando: ' . $horaCompleta . ' en: ' . $listaHoras];
+                            $is_debug = true;
+                           } else {
+                            $disponible = true;
+                           }
+                          @endphp
+                          @if ($disponible)
+                              <td
+                              data-hora="{{ $horaCompleta }}"
+                              data-anfitrion="{{ $anfitrion->id }}"
+                              class="reserva-celda available"
+                              data-clase="{{ strtolower($anfitrion->operativo->clases_actividad[0] ?? '') }}"
+                             >
+                              Disponible
+                               </td>
                             @else
-                                @php
-                                    $horarioAnfitrion = $horariosAnfitriones[$anfitrion->id] ?? [];
-                                    $diaSemana = strtolower(\Carbon\Carbon::parse($fechaSeleccionada)->locale('es')->translatedFormat('l'));
-                                    $diaSemanaSinTildes = strtr($diaSemana, ['á'=>'a', 'é'=>'e', 'í'=>'i', 'ó'=>'o', 'ú'=>'u']);
-                                    $horarioDelDia = $horarioAnfitrion[$diaSemanaSinTildes] ?? [];
-                                    $disponible = false; // Por defecto no está disponible
-
-                                    if (empty($horarioDelDia)) {
-                                        // Si no tiene horario definido para este día, se marca y se salta
-                                        echo '<td class="reserva-celda no-disponible" style="background-color: yellow;">SIN HORARIO (' . $diaSemanaSinTildes . ')</td>';
-                                        continue;
-                                    }
-
-                                    // Verifica si la hora actual está en el horario del anfitrión
-                                    if (in_array($horaCompleta, $horarioDelDia)) {
-                                        $disponible = true;
-                                    }
-                                @endphp
-
-                                @if ($disponible)
-                                    <td
-                                        data-hora="{{ $horaCompleta }}"
-                                        data-anfitrion="{{ $anfitrion->id }}"
-                                        class="reserva-celda available"
-                                        data-clase="{{ strtolower($anfitrion->operativo->clases_actividad[0] ?? '') }}"
-                                    >
-                                    Disponible
-                                    </td>
-                                    @else
-                                    <td class="reserva-celda no-disponible"></td>
-                                    @endif
-                                @endif 
-                        @endforeach                 
+                             <td class="reserva-celda no-disponible"></td>
+                            @endif
+                       @endif 
+                    @endforeach 
                     </tr>
                 @endfor
             @endfor
