@@ -492,18 +492,20 @@ class ReservationController extends Controller
             $horario = $horarioNormalizado;
 
             // Día en formato sin tildes
-            $diaCarbon = \Carbon\Carbon::parse($data['fecha']);
-            $dia = strtolower($diaCarbon->translatedFormat('l'));
+            $diaCarbon = \Carbon\Carbon::parse($data['fecha'])->locale('es'); // Asegurar el locale español
+            $dia = strtolower($diaCarbon->isoFormat('dddd')); // Usar isoFormat para consistencia con el método index
             $dia = str_replace(['á','é','í','ó','ú'], ['a','e','i','o','u'], $dia);
 
-            $horaSolicitada = $data['hora'];
+            $horaSolicitada = \Carbon\Carbon::parse($data['hora'])->format('H:i');
 
             // Validar disponibilidad exacta del horario del anfitrión
             $horasDia = array_map('trim', (array) ($horario[$dia] ?? []));
-            $horaSolicitadaNormalizada = trim($horaSolicitada);
+            
+            // Normalizar las horas del horario a formato H:i
+            $horasDiaNormalizadas = array_map(fn($h) => \Carbon\Carbon::parse($h)->format('H:i'), $horasDia);
 
-            if (!in_array($horaSolicitadaNormalizada, $horasDia)) {
-                $errores["Reserva #$index"][] = "El anfitrión no tiene horario disponible a las {$horaSolicitada} el día {$dia}.";
+            if (!in_array($horaSolicitada, $horasDiaNormalizadas)) {
+                $errores["Reserva #$index"][] = "El anfitrión no tiene un horario de inicio disponible a las {$horaSolicitada} el día {$dia}. Horarios disponibles: " . implode(', ', $horasDia);
                 continue;
             }
 

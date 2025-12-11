@@ -1,5 +1,3 @@
-
-
 /* ===== CONTENEDOR GENERAL ===== */
 .report-container {
     padding: 30px 60px;
@@ -12,44 +10,59 @@
 /* ===== FILTRO SUPERIOR ===== */
 .filtro-form {
     display: flex;
-    gap: 15px;
-    justify-content: flex-end;
-    margin-bottom: 30px;
-    flex-wrap: wrap;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    height: 10rem;
+    width: 100%;
+    margin-bottom: 1rem;
+    gap: 1rem;
 }
-.filtro-form label {
-    font-weight: 600;
-    font-size: 0.9rem;
-    margin-right: 4px;
+.filtro-form .filter {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
 }
-.filtro-form input {
-    font-size: 0.9rem;
-    padding: 5px 8px;
+.filtro-form .filter label {
+    text-align: left;
+    font-size: 1rem;
+    font-weight: 600; 
+    color: #092034; 
+}
+.filtro-form .filter input,
+.filtro-form .filter select { 
+    padding: 10px;
+    border-radius: 5px;
     border: 1px solid #ccc;
-    border-radius: 4px;
+    font-size: 1rem;
+    color: #333;
 }
-.filtro-btn {
-    background: #198754;
-    color: white;
+.filtro-form .btn {
+    background-color: #BC8A55;
     border: none;
-    padding: 6px 14px;
-    border-radius: 4px;
-    cursor: pointer;
+    color: white;
+    font-size: 1rem;
+    font-weight: bold;
+    padding: 10px 30px;
+    border-radius: 30px;
+    transition: background 0.3s ease;
+    height: 48px; 
 }
-.filtro-btn:hover {
-    background-color: #157347;
+.filtro-form .btn:hover {
+    background-color: #092034 !important;
+    color: white !important;
 }
 
 /* ===== TÍTULO PRINCIPAL ===== */
 .titulo-reporte {
-    font-size: 1.6rem;
+    font-size: 1.8rem; 
     font-weight: 700;
     text-align: center;
-    color: #2c3e50;
+    color: #092034; 
     margin-bottom: 30px;
 }
 
-/* ===== GRID FLEXIBLE ===== */
+/* ===== GRID FLEXIBLE (Se mantiene) ===== */
 .reporte-grid {
     display: flex;
     flex-wrap: wrap;
@@ -61,12 +74,10 @@
     flex-wrap: wrap;
     gap: 20px;
 }
-
 .reporte-grid.cols-3 > * {
     flex: 1 1 calc(33.333% - 13.333px);
     max-width: calc(33.333% - 13.333px);
 }
-
 .reporte-grid.cols-2 > * {
     flex: 1 1 calc(50% - 10px);
 }
@@ -74,7 +85,7 @@
     flex: 1 1 100%;
 }
 
-/* ===== TARJETAS ===== */
+/* ===== TARJETAS (Panorama y barra lateral) ===== */
 .tarjeta {
     background: white;
     border-radius: 8px;
@@ -85,6 +96,7 @@
     align-items: center;
     height: 90px;
     box-sizing: border-box;
+    border: 1px solid transparent; 
 }
 
 .tarjeta .valor {
@@ -96,9 +108,16 @@
 .tarjeta:hover {
     box-shadow: 0 4px 12px rgba(0,0,0,0.15);
 }
+/* Estilo para la tarjeta ACTIVA en la barra lateral */
+.report-section.active {
+    border: 2px solid #BC8A55; 
+    background-color: #f7f3ed; 
+}
+
 .contenido-tarjeta .titulo {
     font-size: 0.95rem;
-    color: #666;
+    color: #092034; 
+    font-weight: 600; 
     margin-bottom: 5px;
 }
 .contenido-tarjeta .valor {
@@ -108,13 +127,15 @@
 }
 .icono {
     font-size: 1.8rem;
-    opacity: 0.6;
+    opacity: 0.8; 
+    color: #BC8A55; 
 }
 
 .contenido-tarjeta {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    width: 100%; 
 }
 .acciones {
     display: flex;
@@ -122,9 +143,30 @@
     margin-left: 10px;
 }
 
-.tiny-download i {
-    color: #6c757d !important; /* gris Bootstrap */
+/* ===== BOTONES DE DESCARGA EN TARJETAS (Compacto) ===== */
+.tiny-download {
+    background-color: #BC8A55;
+    color: white;
+    border: none;
+    padding: 6px 10px; 
+    border-radius: 5px;
+    transition: background 0.3s ease;
+    font-size: 0.9rem;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none; 
 }
+.tiny-download i {
+    color: white !important; 
+    font-size: 1rem !important; 
+    margin: 0;
+}
+.tiny-download:hover {
+    background-color: #092034 !important;
+}
+
 
 /* ===== GRÁFICAS ===== */
 .grafica {
@@ -134,10 +176,10 @@
     box-shadow: 0 2px 6px rgba(0,0,0,0.06);
 }
 .grafica-titulo {
-    font-size: 1rem;
+    font-size: 1.2rem; 
     font-weight: 700;
     margin-bottom: 16px;
-    color: #2c3e50;
+    color: #092034; 
 }
 .grafica-header {
     display: flex;
@@ -145,6 +187,29 @@
     align-items: center;
     margin-bottom: 15px;
 }
+/* Estilo para el botón de DESCARGA DE GRÁFICAS (Compacto) */
+.grafica-header .btn-export-graph {
+    background-color: #BC8A55;
+    color: white;
+    border: none;
+    padding: 6px 10px; 
+    border-radius: 5px;
+    transition: background 0.3s ease;
+    font-size: 0.9rem;
+    line-height: 1;
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    gap: 5px; 
+}
+.grafica-header .btn-export-graph:hover {
+    background-color: #092034;
+}
+.grafica-header .btn-export-graph i {
+    color: white;
+    font-size: 1rem;
+}
+
 
 .grafica-barras .barra-item {
     margin-bottom: 12px;
@@ -152,8 +217,10 @@
 .barra-label {
     display: flex;
     justify-content: space-between;
-    font-size: 0.85rem;
+    font-size: 0.9rem;
+    font-weight: 500;
     margin-bottom: 4px;
+    color: #333;
 }
 .barra-base {
     background-color: #e9ecef;
@@ -163,7 +230,7 @@
 }
 .barra-fill {
     height: 100%;
-    background-color: #0d6efd;
+    background-color: #BC8A55; 
     color: white;
     padding-right: 10px;
     text-align: right;
@@ -177,11 +244,204 @@
     background-color: #198754 !important;
 }
 
-/* ===== BOTÓN EXPORTAR ===== */
+/* ===== BOTÓN EXPORTAR (Se mantiene por si se usa) ===== */
 .exportar-btn {
     text-align: right;
     margin-top: 20px;
 }
 .exportar-btn a {
     font-size: 0.9rem;
+    background-color: #BC8A55;
+    border: 1px solid #BC8A55;
+    color: white;
+    font-weight: bold;
+    padding: 8px 15px;
+    border-radius: 30px;
+    transition: background 0.3s ease;
+}
+.exportar-btn a:hover {
+    background-color: #092034 !important;
+    border-color: #092034 !important;
+}
+
+/* ===== ESTILOS DE REPORTES DINÁMICOS (TABLAS) ===== */
+
+/* Contenedor del reporte dinámico */
+.report-content {
+    background-color: #fff;
+    border: 1px solid #ddd;
+    border-radius: 10px;
+    padding: 25px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    overflow-y: hidden; 
+    overflow-x: auto;
+    margin-top: 20px;
+}
+
+/* Contenedor que alinea el título del reporte y el botón de Exportar/Importar */
+.report-content .dynamic-report-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+/* Estilo para el título del reporte dinámico para asegurar alineación vertical con el botón */
+.report-content .dynamic-report-header h3 {
+    margin: 0;
+    padding: 0;
+    font-size: 1.6rem; 
+    font-weight: 700;
+    color: #092034;
+}
+
+/* Área de filtros que queda debajo del header (título + botón) */
+.report-filters-area {
+    margin-bottom: 15px; 
+    display: flex;
+    justify-content: flex-start; 
+}
+
+/* Contenedor de filtros locales */
+.report-filters {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.report-filters label {
+    font-weight: 600;
+    color: #092034;
+}
+
+.report-filters .local-filter {
+    padding: 5px 10px;
+    border-radius: 5px;
+    border: 1px solid #ccc;
+}
+
+/* Botón de Exportar/Importar en reportes */
+.btn-export-section {
+    background-color: #BC8A55;
+    color: white;
+    border: none;
+    font-weight: bold; 
+    padding: 10px 30px;
+    border-radius: 30px;
+    transition: background 0.3s ease;
+    font-size: 1rem; 
+    line-height: 1;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    text-decoration: none;
+}
+
+.btn-export-section:hover {
+    background-color: #092034;
+}
+
+.report-content table {
+    border-collapse: collapse;
+    width: 100%;
+    background-color: #fff;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.report-content table thead {
+    background-color: #092034; 
+    color: white;
+}
+
+.report-content table th {
+  color: white !important;
+  font-weight: bold;
+  font-size: 18px;
+  padding: 12px 16px;
+  border-bottom: 1px solid #BABABA;
+  text-align: center;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.report-content table tr {
+  height: auto; 
+}
+
+.report-content table td {
+  color: #333;
+  font-size: 18px;
+  padding: 12px 16px;
+  text-align: center;
+  border-bottom: 1px solid #BABABA;
+}
+
+.report-content table tbody tr:nth-child(odd) {
+  background-color: #ffffff;
+}
+
+.report-content table tbody tr:nth-child(even) {
+  background-color: #BABABA;
+}
+
+.report-content table tbody tr:hover {
+  background-color: #777777 !important;
+}
+
+
+/* ===== ESTILOS MOVIDOS DESDE INDEX.BLADE.PHP (Se mantienen) ===== */
+:root {
+    --primary3: #092034;
+    --primary1-rgb: 186, 186, 186;
+}
+
+.container {
+    transition: margin-left 0.3s ease, width 0.3s ease;
+    margin-left: 70px;
+    width: calc(100% - 70px);
+    height: 100%;
+}
+
+.sidebar:hover ~ .container {
+    margin-left: 270px;
+    width: calc(100% - 270px);
+}
+
+.report-main-layout {
+    display: flex;
+    gap: 20px;
+}
+.report-sidebar {
+    flex: 0 0 280px;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    gap: 0;
+}
+.report-main-content {
+    flex: 1; 
+}
+.reports-inline { margin-top: 0; }
+
+.report-sidebar .info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.report-sidebar .info .fas {
+    width: 20px; 
+    text-align: center;
+    color: #BC8A55; 
+}
+
+.report-sidebar .info .titulo {
+    margin: 0;
+    color: #092034; 
+}
+
+.report-sidebar .tarjeta {
+    margin-bottom: 5px;
+    height: auto;
+    padding: 10px 16px;
 }

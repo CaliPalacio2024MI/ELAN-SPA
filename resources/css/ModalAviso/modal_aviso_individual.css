@@ -71,7 +71,7 @@
 
 .custom-alert-modal .btn-close::before {
   content: "×";
-  font-size: 40px;
+  font-size: 30px;
   font-weight: 900;
   color: #dc3545;
   line-height: 1;
