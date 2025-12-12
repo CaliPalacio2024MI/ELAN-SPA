@@ -209,11 +209,11 @@ class SaleController extends Controller
     {
         $subtotal_final = 0;
         $total_final = 0;
-
-        // Definir las tasas para el cálculo.
-        $tasaIva = 0.16; // Se mantiene el 16% de IVA.
-        $tasaServicio = 0.20; // Nuevo Cargo por Servicio (CxS) del 20%.
-        $divisor = 1 + $tasaIva + $tasaServicio;
+ 
+        // Obtener las tasas desde el archivo de configuración.
+        $tasaIva = config('finance.tax_rates.iva', 0.16);
+        $tasaServicio = config('finance.tax_rates.service_charge', 0.20);
+        $divisor = 1 + $tasaIva + $tasaServicio; // e.g., 1 + 0.16 + 0.20 = 1.36
 
         foreach ($reservations as $res) {
             if (!$res || !$res->experiencia) continue;

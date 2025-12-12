@@ -522,7 +522,7 @@ class ReportController extends Controller
                     $porTerapeuta = $resultadosFiltrados;
                 }
 
-                $content .= '<th>Terapeuta</th><th>Servicio</th><th>Cantidad</th><th>Subtotal</th><th>Impuestos</th><th>Total</th></tr></thead><tbody>';
+                $content .= '<th>Terapeuta</th><th>Servicio</th><th>Cantidad</th><th>Subtotal</th><th>IVA</th><th>Total</th></tr></thead><tbody>';
 
                 foreach ($porTerapeuta as $ter) {
                     $nombreTer = htmlspecialchars($ter['nombre']);                    
@@ -573,7 +573,8 @@ class ReportController extends Controller
                     ->where('propina', '>', 0);
 
                     if ($searchTerm) {
-                        $salesQuery->where(function ($query) use ($searchTerm) {
+                        $tasaIvaPropina = config('finance.tax_rates.tip_iva', 0.16);
+                        $salesQuery->where(function ($query) use ($searchTerm, $tasaIvaPropina) {
                             $query->whereHas('cliente', function ($cq) use ($searchTerm) {
                                 $cq->where(DB::raw("LOWER(CONCAT_WS(' ', nombre, apellido_paterno, apellido_materno))"), 'like', "%{$searchTerm}%");
                             })
@@ -596,7 +597,7 @@ class ReportController extends Controller
                                 ->orWhere('fecha', 'like', "%{$searchTerm}%");
                             })
                             ->orWhere(DB::raw("CAST(propina AS CHAR)"), 'like', "%{$searchTerm}%")
-                            ->orWhere(DB::raw("CAST(propina * 0.16 AS CHAR)"), 'like', "%{$searchTerm}%");
+                            ->orWhere(DB::raw("CAST(propina * {$tasaIvaPropina} AS CHAR)"), 'like', "%{$searchTerm}%");
                         });
                     }
 
@@ -621,7 +622,8 @@ class ReportController extends Controller
                                     : 'N/D';
 
                         $propina = floatval($sale->propina ?: 0);
-                        $iva_propina = $propina * 0.16;
+                        // Obtener la tasa desde el archivo de configuración.
+                        $iva_propina = $propina * config('finance.tax_rates.tip_iva', 0.16);
 
                         $content .= "<tr>";
                         $content .= "<td>" . htmlspecialchars($terName) . "</td>";
@@ -865,7 +867,7 @@ class ReportController extends Controller
                 
                 $ventasExp = $ventasQuery->get();
 
-                $content .= '<th>Fecha</th><th>Tipo</th><th>Vendedor</th><th>Subtotal</th><th>Impuestos</th><th>Propina</th><th>Total</th></tr></thead><tbody>';
+                $content .= '<th>Fecha</th><th>Tipo</th><th>Vendedor</th><th>Subtotal</th><th>IVA</th><th>Propina</th><th>Total</th></tr></thead><tbody>';
 
                 foreach ($ventasExp as $v) {
                     $reservacion = $v->reservacion;

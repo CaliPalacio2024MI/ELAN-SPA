@@ -150,8 +150,9 @@ class ReservationController extends Controller
 
         $horaInicio = $validated['hora'];
         $duracionMin = $experiencia->duracion;
+        $breakTime = config('finance.reservations.therapist_break_time', 10);
         $horaFin = date('H:i', strtotime("$horaInicio +{$duracionMin} minutes"));
-        $horaFinDescanso = date('H:i', strtotime("$horaFin +10 minutes"));
+        $horaFinDescanso = date('H:i', strtotime("$horaFin +{$breakTime} minutes"));
 
         if ($horaFinDescanso > '21:00') {
             return $this->jsonOrRedirectError($request, 'No hay tiempo suficiente para completar esta experiencia antes del cierre.');
@@ -306,9 +307,10 @@ class ReservationController extends Controller
         // Calcular horas para validaciones
         $experiencia = Experience::find($validated['experiencia_id']);
         $duracionMin = $experiencia->duracion ?? 0;
+        $breakTime = config('finance.reservations.therapist_break_time', 10);
         $horaInicio = $validated['hora'];
         $horaFin = date('H:i', strtotime("$horaInicio +{$duracionMin} minutes"));
-        $horaFinDescanso = date('H:i', strtotime("$horaFin +10 minutes"));
+        $horaFinDescanso = date('H:i', strtotime("$horaFin +{$breakTime} minutes"));
 
         // Validar conflictos de horarios para cliente
         $clienteOcupado = Reservation::where('cliente_id', $validated['cliente_id'])
@@ -349,14 +351,15 @@ class ReservationController extends Controller
         }
 
         // Validar conflictos de horarios para anfitrión (incluye descanso)
+        $breakTimeSeconds = config('finance.reservations.therapist_break_time', 10) * 60;
         $anfitrionOcupado = Reservation::where('anfitrion_id', $validated['anfitrion_id'])
             ->where('fecha', $validated['fecha'])
             ->where('id', '!=', $reservation->id)
             ->where('estado', 'activa')
-            ->where(function ($q) use ($horaInicio, $horaFinDescanso) {
+            ->where(function ($q) use ($horaInicio, $horaFinDescanso, $breakTimeSeconds) {
                 $q->whereBetween('hora', [$horaInicio, $horaFinDescanso])
-                  ->orWhereRaw("? BETWEEN hora AND ADDTIME(hora, SEC_TO_TIME((SELECT duracion FROM experiences WHERE id = experiencia_id) * 60 + 600))", [$horaInicio])
-                  ->orWhereRaw("? BETWEEN hora AND ADDTIME(hora, SEC_TO_TIME((SELECT duracion FROM experiences WHERE id = experiencia_id) * 60 + 600))", [$horaFinDescanso]);
+                  ->orWhereRaw("? BETWEEN hora AND ADDTIME(hora, SEC_TO_TIME((SELECT duracion FROM experiences WHERE id = experiencia_id) * 60 + ?))", [$horaInicio, $breakTimeSeconds])
+                  ->orWhereRaw("? BETWEEN hora AND ADDTIME(hora, SEC_TO_TIME((SELECT duracion FROM experiences WHERE id = experiencia_id) * 60 + ?))", [$horaFinDescanso, $breakTimeSeconds]);
             })->exists();
 
         if ($anfitrionOcupado) {
@@ -477,8 +480,9 @@ class ReservationController extends Controller
             }
 
             $data['duracion'] = $exp->duracion;
+            $breakTime = config('finance.reservations.therapist_break_time', 10);
             $data['hora_fin'] = date('H:i', strtotime("{$data['hora']} +{$exp->duracion} minutes"));
-            $data['hora_fin_descanso'] = date('H:i', strtotime("{$data['hora_fin']} +10 minutes"));
+            $data['hora_fin_descanso'] = date('H:i', strtotime("{$data['hora_fin']} +{$breakTime} minutes"));
             $data['spa_id'] = $spa->id;
 
             // Obtener y normalizar horario del anfitrión
@@ -683,13 +687,14 @@ class ReservationController extends Controller
 
     private function hayConflictoAnfitrion($data, $horaInicio, $horaFinDescanso, $spaId)
     {
+        $breakTimeSeconds = config('finance.reservations.therapist_break_time', 10) * 60;
         return Reservation::where('anfitrion_id', $data['anfitrion_id'])
             ->where('fecha', $data['fecha'])
             ->where('estado', 'activa')
-            ->where(function ($q) use ($horaInicio, $horaFinDescanso) {
+            ->where(function ($q) use ($horaInicio, $horaFinDescanso, $breakTimeSeconds) {
                 $q->whereBetween('hora', [$horaInicio, $horaFinDescanso])
-                  ->orWhereRaw("? BETWEEN hora AND ADDTIME(hora, SEC_TO_TIME((SELECT duracion FROM experiences WHERE id = experiencia_id) * 60 + 600))", [$horaInicio])
-                  ->orWhereRaw("? BETWEEN hora AND ADDTIME(hora, SEC_TO_TIME((SELECT duracion FROM experiences WHERE id = experiencia_id) * 60 + 600))", [$horaFinDescanso]);
+                  ->orWhereRaw("? BETWEEN hora AND ADDTIME(hora, SEC_TO_TIME((SELECT duracion FROM experiences WHERE id = experiencia_id) * 60 + ?))", [$horaInicio, $breakTimeSeconds])
+                  ->orWhereRaw("? BETWEEN hora AND ADDTIME(hora, SEC_TO_TIME((SELECT duracion FROM experiences WHERE id = experiencia_id) * 60 + ?))", [$horaFinDescanso, $breakTimeSeconds]);
             })->exists();
     }
 
