@@ -17,7 +17,7 @@ require __DIR__.'/experiences.php';
 require __DIR__.'/clients.php';
 require __DIR__.'/boutique.php';
 require __DIR__.'/gimnasio.php';
-require __DIR__.'/areas.php';
+require __DIR__.'/unidad.php';
 
 /**
  * Ruta para asignar el spa actual en sesión.
@@ -48,3 +48,6 @@ Route::get('/', function () {
 Route::middleware(['auth'])->group(function () {
     Route::get('/salon', [SalonController::class, 'index'])->name('salon.index');
 });
+
+// La ruta para la página de módulos ya existe en routes/dashboard.php, por lo que no es necesario duplicarla aquí.
+// Las rutas de 'unidad' se gestionarán en routes/unidad.php para mantener el orden.
