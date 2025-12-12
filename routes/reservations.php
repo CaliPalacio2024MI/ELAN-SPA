@@ -42,6 +42,7 @@ Route::middleware(['auth', 'role:master,administrador,recepcionista'])->group(fu
     Route::post('/sales/store', [SaleController::class, 'store'])->name('sales.store');
 
     Route::get('/reportes', [ReportController::class, 'index'])->name('reports.index');
+    Route::get('/reportes/panorama', [ReportController::class, 'panorama'])->name('reports.panorama');
     Route::get('/reportes/exportar', [ReportController::class, 'export'])->name('reports.export');
     Route::get('/reportes/exportar/{tipo}', [ReportController::class, 'exportTipo'])->name('reports.export.tipo');
 

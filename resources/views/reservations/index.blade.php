@@ -170,9 +170,9 @@
         </div>
 
         <div class="mb-3">
-            <label class="form-label">Anfitrión</label>
+            <label class="form-label">Anfitrión/Terapeuta</label>
             <select class="form-select" name="grupo[__INDEX__][anfitrion_id]" required>
-                <option value="">Selecciona anfitrión</option>
+                <option value="">Selecciona anfitrión/terapeuta</option>
                 @foreach ($anfitrionesDisponibles as $anfitrion)
                     <option value="{{ $anfitrion->id }}">{{ $anfitrion->nombre_usuario }} {{ $anfitrion->apellido_paterno }}</option>
                 @endforeach

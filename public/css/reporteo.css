@@ -1,0 +1,209 @@
+/* ====== GENERAL ====== */
+body {
+    overflow-x: hidden;
+}
+
+main {
+    margin-left: 80px;
+    margin-top: 10px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    justify-content: center;
+}
+
+/* ====== TÍTULO PRINCIPAL ====== */
+.main-header {
+    text-align: center;
+    font-weight: 900;
+    font-size: 24px;
+    position: relative;
+    padding: 10px 0;
+    margin-top: 40px;
+    height: 40px;
+    line-height: 1.2;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1;
+}
+
+.main-header::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    border-radius: 5px;
+    z-index: -1;
+}
+
+/* ====== BOTONERA SUPERIOR ====== */
+.botonera-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    padding: 12 0px;
+    margin-top: -100px;
+    margin-bottom: 0px;
+}
+
+/* ====== BOTONES ====== */
+.btns,
+.btn-nuevo-cliente {
+    background-color: #BC8A55;
+    border: none;
+    color: white;
+    font-size: 16px;
+    font-weight: bold;
+    padding: 10px 30px;
+    border-radius: 30px;
+    transition: background 0.3s ease;
+}
+
+.btns {
+    left: 20px;
+}
+
+.btn-nuevo-cliente {
+    position: absolute;
+    top: 30px;
+    right: 20px;
+    padding: 12px 30px; 
+    background: #BC8A55;
+    color: #ffffff;
+    font-weight: bold;
+    border: none;
+    border-radius: 30px;
+    text-decoration: none;
+    white-space: nowrap;
+    font-size: 16px;
+    z-index: 1000;
+}
+
+/* Hover botones */
+.btns:hover,
+.btn-nuevo-cliente:hover {
+    background-color: #092034 !important;
+    color: white !important;
+}
+
+.btns:hover i,
+.btn-nuevo-cliente:hover i {
+    color: white !important;
+}
+
+/* ====== TABLA ====== */
+table thead {
+    background-color: #092034;
+    color: white;
+}
+
+table thead th {
+    color: white !important;
+    font-weight: bold;
+    font-size: 18px;
+    padding: 12px 16px;
+    border-bottom: 1px solid #BABABA;
+}
+
+.table-container {
+    width: 100%;
+    max-width: 1200px;
+    margin: 20px;
+    padding: 15px;
+    background-color: white;
+    border: 1px solid #ddd;
+    border-radius: 10px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    border-spacing: 0;
+    min-width: 1100px; 
+}
+
+tbody tr:nth-child(odd) {
+    background-color: #FFFFFF;
+}
+
+tbody tr:nth-child(even) {
+    background-color: #BABABA ;
+}
+
+tbody tr:hover {
+    background-color: #777777   !important;
+}
+
+th, td {
+    padding: 12px 16px;
+    text-align: center;
+    font-size: 18px;
+    color: #333;
+    border-bottom: 1px solid #BABABA;
+}
+
+/* Acciones dentro de la tabla */
+.table-container td .action-buttons {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 40px;
+}
+
+button.btn-warning,
+button.btn-danger {
+    background-color: transparent !important;
+    border: none !important;
+    padding: 0 !important;
+}
+
+.btn-imagen img,
+.eliminar-btn img {
+    width: 25px;
+    height: auto;
+    display: inline-block;
+}
+
+.icono-accion-pequeno {
+    font-size: 24px !important;
+    color: black;
+}
+
+/* ====== FORMULARIO DE BÚSQUEDA ====== */
+.search-form {
+    width: 40%;
+    background-color: rgb(238, 238, 238);
+    padding: 15px;
+    border-radius: 10px;
+    margin-bottom: 20px;
+}
+
+.form-control:focus,
+.form-select:focus {
+    border-color: #a2a2a2;
+    box-shadow: 0 0 0 0.25rem rgba(255, 255, 255, 0.6);
+}
+
+/* ====== RESPONSIVE ====== */
+@media (max-width: 768px) {
+    .botonera-top {
+        height: auto;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 20px;
+    }
+
+    .btns,
+    .btn-nuevo-cliente {
+        position: static;
+        width: 100%;
+        max-width: 300px;
+    }
+}

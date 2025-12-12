@@ -20,7 +20,7 @@
 
 <h1 class="mb-4">Check-out de Reservación</h1>
 
-<form action="{{ $sale ? route('sales.update', $sale->id) : route('sales.store') }}" method="POST">
+<form action="{{ $sale ? route('sales.update', $sale->id) : route('sales.store') }}" method="POST" id="checkoutForm">
     @csrf
     @if ($sale)
         @method('PUT')
@@ -188,6 +188,49 @@
         />
     </section>
 
+    <section>
+        <div class="detalle-box">
+            <h3>Datos para facturar</h3>
+
+            <div style="margin-bottom:0.5rem;">
+                <label style="display:inline-flex;align-items:center;gap:.5rem;">
+                    <input type="checkbox" id="solicitaFactura" name="solicita_factura" value="1" {{ old('solicita_factura') ? 'checked' : '' }} />
+                    Solicitar factura / datos fiscales
+                </label>
+            </div>
+
+            <div id="facturaFields" style="display: none; margin-top: 0.5rem;">
+                <div class="campo-form">
+                    <label for="tipo_persona">Tipo de persona</label>
+                    <select name="tipo_persona" id="tipo_persona" class="input">
+                        <option value="fisica">Física</option>
+                        <option value="moral">Moral</option>
+                    </select>
+                </div>
+
+                <div class="campo-form">
+                    <label for="razon_social">Nombre / Razón social</label>
+                    <input type="text" name="razon_social" id="razon_social" value="{{ old('razon_social') }}" class="input" />
+                </div>
+
+                <div class="campo-form">
+                    <label for="rfc">RFC / Documento</label>
+                    <input type="text" name="rfc" id="rfc" value="{{ old('rfc') }}" class="input" />
+                </div>
+
+                <div class="campo-form">
+                    <label for="direccion_fiscal">Dirección fiscal</label>
+                    <input type="text" name="direccion_fiscal" id="direccion_fiscal" value="{{ old('direccion_fiscal') }}" class="input" />
+                </div>
+
+                <div class="campo-form">
+                    <label for="correo_factura">Correo para recibir factura</label>
+                    <input type="email" name="correo_factura" id="correo_factura" value="{{ old('correo_factura') }}" class="input" />
+                </div>
+            </div>
+        </div>
+    </section>
+
     <div class="btn-guardar">
         <button type="submit" class="btn-cobro">Marcar como cobrado</button>
         <a href="{{ route('reservations.index') }}" class="btn-cobro-cancelar">Cancelar</a>
@@ -211,6 +254,33 @@
 
         label.textContent = opciones[value] || 'Referencia del pago';
     });
+
+    // Mostrar/ocultar campos de facturación
+    (function () {
+        const checkbox = document.getElementById('solicitaFactura');
+        const facturaFields = document.getElementById('facturaFields');
+        const inputs = ['tipo_persona', 'razon_social', 'rfc', 'direccion_fiscal', 'correo_factura'];
+
+        function toggleFacturaFields() {
+            const checked = checkbox.checked;
+            facturaFields.style.display = checked ? 'block' : 'none';
+            inputs.forEach(id => {
+                const el = document.getElementById(id);
+                if (!el) return;
+                if (checked) {
+                    el.setAttribute('required', 'required');
+                } else {
+                    el.removeAttribute('required');
+                }
+            });
+        }
+
+        if (checkbox) {
+            checkbox.addEventListener('change', toggleFacturaFields);
+            // Inicializar según estado antiguo (postback)
+            toggleFacturaFields();
+        }
+    })();
 </script>
 
 </body>

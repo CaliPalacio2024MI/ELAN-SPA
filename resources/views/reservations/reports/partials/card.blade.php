@@ -10,10 +10,17 @@
         <div class="acciones">
             {{-- Botón de descarga si se proporciona una ruta --}}
             @isset($exportRoute)
-                <a href="{{ route('reports.export.tipo', ['tipo' => $exportRoute, 'desde' => request('desde'), 'hasta' => request('hasta')]) }}"
+                <a href="{{ route('reports.export.tipo', [
+                    'tipo' => $exportRoute, 
+                    'desde' => request('desde', $fechaInicio), 
+                    'hasta' => request('hasta', $fechaFin), 
+                    'servicio' => request('servicio'), 
+                    'lugar' => $spaId
+                ]) }}"
                    class="btn btn-sm btn-outline-success tiny-download"
+                   data-export-type="{{ $exportRoute }}"
                    title="Descargar {{ $title }} en Excel">
-                    <i class="fas fa-file-excel"></i>
+                    <i class="fas fa-download"></i>
                 </a>
             @endisset
         </div>
