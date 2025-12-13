@@ -144,59 +144,23 @@
                         <div class="mb-3">
                             <label class="form-label">Especialidades</label>
 
-                            @php
-                                // Organizar experiencias por las 3 categorías principales: masajes, faciales, corporales
-                                $mapCategorias = ['masajes' => [], 'faciales' => [], 'corporales' => []];
-                                foreach (($experienciasPorClase ?? []) as $claseName => $tipos) {
-                                    $k = strtolower($claseName);
-                                    if (strpos($k, 'masaj') !== false) {
-                                        $mapCategorias['masajes'] = $tipos;
-                                    } elseif (strpos($k, 'facial') !== false) {
-                                        $mapCategorias['faciales'] = $tipos;
-                                    } elseif (strpos($k, 'corpor') !== false || strpos($k, 'corp') !== false) {
-                                        $mapCategorias['corporales'] = $tipos;
-                                    }
-                                }
-                            @endphp
-
-                            <div class="form-check">
-                                <input class="form-check-input main-cat" type="checkbox" value="masajes" id="cat_masajes" data-target="subtipo_masajes">
-                                <label class="form-check-label" for="cat_masajes">Masajes</label>
-                            </div>
-                            <div id="subtipo_masajes" class="ps-3 mt-2 subtipo-container" style="display:none;">
-                                @foreach ($mapCategorias['masajes'] as $idx => $tipo)
-                                    <div class="form-check">
-                                        <input class="form-check-input subtype-checkbox" type="checkbox" name="clases_actividad[]" value="{{ $tipo }}" id="masaje_tipo_{{ $idx }}">
-                                        <label class="form-check-label" for="masaje_tipo_{{ $idx }}">{{ $tipo }}</label>
-                                    </div>
-                                @endforeach
-                            </div>
-
-                            <div class="form-check mt-2">
-                                <input class="form-check-input main-cat" type="checkbox" value="faciales" id="cat_faciales" data-target="subtipo_faciales">
-                                <label class="form-check-label" for="cat_faciales">Faciales</label>
-                            </div>
-                            <div id="subtipo_faciales" class="ps-3 mt-2 subtipo-container" style="display:none;">
-                                @foreach ($mapCategorias['faciales'] as $idx => $tipo)
-                                    <div class="form-check">
-                                        <input class="form-check-input subtype-checkbox" type="checkbox" name="clases_actividad[]" value="{{ $tipo }}" id="facial_tipo_{{ $idx }}">
-                                        <label class="form-check-label" for="facial_tipo_{{ $idx }}">{{ $tipo }}</label>
-                                    </div>
-                                @endforeach
-                            </div>
-
-                            <div class="form-check mt-2">
-                                <input class="form-check-input main-cat" type="checkbox" value="corporales" id="cat_corporales" data-target="subtipo_corporales">
-                                <label class="form-check-label" for="cat_corporales">Corporales</label>
-                            </div>
-                            <div id="subtipo_corporales" class="ps-3 mt-2 subtipo-container" style="display:none;">
-                                @foreach ($mapCategorias['corporales'] as $idx => $tipo)
-                                    <div class="form-check">
-                                        <input class="form-check-input subtype-checkbox" type="checkbox" name="clases_actividad[]" value="{{ $tipo }}" id="corporal_tipo_{{ $idx }}">
-                                        <label class="form-check-label" for="corporal_tipo_{{ $idx }}">{{ $tipo }}</label>
-                                    </div>
-                                @endforeach
-                            </div>
+                            @forelse (($experienciasPorClase ?? []) as $claseName => $tipos)
+                                @php $safeClassId = str_replace(' ', '_', strtolower($claseName)); @endphp
+                                <div class="form-check">
+                                    <input class="form-check-input main-cat" type="checkbox" value="{{ $claseName }}" id="cat_{{ $safeClassId }}" data-target="subtipo_{{ $safeClassId }}">
+                                    <label class="form-check-label" for="cat_{{ $safeClassId }}">{{ ucfirst($claseName) }}</label>
+                                </div>
+                                <div id="subtipo_{{ $safeClassId }}" class="ps-3 mt-2 subtipo-container" style="display:none;">
+                                    @foreach ($tipos as $idx => $tipo)
+                                        <div class="form-check">
+                                            <input class="form-check-input subtype-checkbox" type="checkbox" name="clases_actividad[]" value="{{ $tipo }}" id="{{ $safeClassId }}_tipo_{{ $idx }}">
+                                            <label class="form-check-label" for="{{ $safeClassId }}_tipo_{{ $idx }}">{{ $tipo }}</label>
+                                        </div>
+                                    @endforeach
+                                </div>
+                            @empty
+                                <p class="text-muted">No hay especialidades disponibles.</p>
+                            @endforelse
                         </div>
 
                         <div class="mb-3">
@@ -253,44 +217,23 @@
                         <div class="mb-3">
                             <label class="form-label">Especialidades</label>
 
-                            <div class="form-check">
-                                <input class="form-check-input edit-main-cat" type="checkbox" value="masajes" id="edit_cat_masajes" data-target="edit_subtipo_masajes">
-                                <label class="form-check-label" for="edit_cat_masajes">Masajes</label>
-                            </div>
-                            <div id="edit_subtipo_masajes" class="ps-3 mt-2 edit-subtipo-container" style="display:none;">
-                                @foreach ($mapCategorias['masajes'] as $idx => $tipo)
-                                    <div class="form-check">
-                                        <input class="form-check-input edit-subtype-checkbox" type="checkbox" name="clases_actividad[]" value="{{ $tipo }}" id="edit_masaje_tipo_{{ $idx }}">
-                                        <label class="form-check-label" for="edit_masaje_tipo_{{ $idx }}">{{ $tipo }}</label>
-                                    </div>
-                                @endforeach
-                            </div>
-
-                            <div class="form-check mt-2">
-                                <input class="form-check-input edit-main-cat" type="checkbox" value="faciales" id="edit_cat_faciales" data-target="edit_subtipo_faciales">
-                                <label class="form-check-label" for="edit_cat_faciales">Faciales</label>
-                            </div>
-                            <div id="edit_subtipo_faciales" class="ps-3 mt-2 edit-subtipo-container" style="display:none;">
-                                @foreach ($mapCategorias['faciales'] as $idx => $tipo)
-                                    <div class="form-check">
-                                        <input class="form-check-input edit-subtype-checkbox" type="checkbox" name="clases_actividad[]" value="{{ $tipo }}" id="edit_facial_tipo_{{ $idx }}">
-                                        <label class="form-check-label" for="edit_facial_tipo_{{ $idx }}">{{ $tipo }}</label>
-                                    </div>
-                                @endforeach
-                            </div>
-
-                            <div class="form-check mt-2">
-                                <input class="form-check-input edit-main-cat" type="checkbox" value="corporales" id="edit_cat_corporales" data-target="edit_subtipo_corporales">
-                                <label class="form-check-label" for="edit_cat_corporales">Corporales</label>
-                            </div>
-                            <div id="edit_subtipo_corporales" class="ps-3 mt-2 edit-subtipo-container" style="display:none;">
-                                @foreach ($mapCategorias['corporales'] as $idx => $tipo)
-                                    <div class="form-check">
-                                        <input class="form-check-input edit-subtype-checkbox" type="checkbox" name="clases_actividad[]" value="{{ $tipo }}" id="edit_corporal_tipo_{{ $idx }}">
-                                        <label class="form-check-label" for="edit_corporal_tipo_{{ $idx }}">{{ $tipo }}</label>
-                                    </div>
-                                @endforeach
-                            </div>
+                            @forelse (($experienciasPorClase ?? []) as $claseName => $tipos)
+                                @php $safeClassId = str_replace(' ', '_', strtolower($claseName)); @endphp
+                                <div class="form-check">
+                                    <input class="form-check-input edit-main-cat" type="checkbox" value="{{ $claseName }}" id="edit_cat_{{ $safeClassId }}" data-target="edit_subtipo_{{ $safeClassId }}">
+                                    <label class="form-check-label" for="edit_cat_{{ $safeClassId }}">{{ ucfirst($claseName) }}</label>
+                                </div>
+                                <div id="edit_subtipo_{{ $safeClassId }}" class="ps-3 mt-2 edit-subtipo-container" style="display:none;">
+                                    @foreach ($tipos as $idx => $tipo)
+                                        <div class="form-check">
+                                            <input class="form-check-input edit-subtype-checkbox" type="checkbox" name="clases_actividad[]" value="{{ $tipo }}" id="edit_{{ $safeClassId }}_tipo_{{ $idx }}">
+                                            <label class="form-check-label" for="edit_{{ $safeClassId }}_tipo_{{ $idx }}">{{ $tipo }}</label>
+                                        </div>
+                                    @endforeach
+                                </div>
+                            @empty
+                                <p class="text-muted">No hay especialidades disponibles.</p>
+                            @endforelse
                         </div>
                         
                         <div class="mb-3">
