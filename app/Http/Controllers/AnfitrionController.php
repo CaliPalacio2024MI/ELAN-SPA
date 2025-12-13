@@ -115,6 +115,12 @@ class AnfitrionController extends Controller
             })
             ->toArray();
 
+        // Obtener los departamentos disponibles para los formularios
+        $departamentosDisponibles = Departamento::where('spa_id', $spaId)
+            ->where('activo', true)
+            ->orderBy('nombre')
+            ->pluck('nombre');
+
         return view('gestores.gestor_anfitriones', [
             'anfitriones' => $anfitriones,
             'spas' => Spa::all(),
@@ -122,6 +128,7 @@ class AnfitrionController extends Controller
             'todasClases' => $todasClases,
             'clasesDisponibles' => $clasesDisponibles,
             'experienciasPorClase' => $experienciasPorClase,
+            'departamentosDisponibles' => $departamentosDisponibles, // <-- Variable que faltaba
         ]);
     }
 
