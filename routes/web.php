@@ -18,7 +18,7 @@ require __DIR__.'/clients.php';
 require __DIR__.'/boutique.php';
 require __DIR__.'/gimnasio.php';
 require __DIR__.'/unidad.php';
-
+require __DIR__.'/areas.php';
 /**
  * Ruta para asignar el spa actual en sesión.
  * Recibe el nombre del spa, busca su modelo y guarda id y nombre en sesión.
