@@ -10,6 +10,24 @@ export const ReservationFormHandler = {
     normalizeString(s) {
         return String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
     },
+    // Comprueba si una cabina (con sus 'clases_actividad' que contienen nombres de experiencias)
+    // es compatible con una clase requerida (nombre general de la experiencia)
+    cabinaSoportaClase(cabina, claseRequerida) {
+        if (!cabina || !Array.isArray(cabina.clases_actividad)) return false;
+        const experiencias = window.ReservasConfig?.experiencias || [];
+        const claseNorm = ReservationFormHandler.normalizeString(claseRequerida);
+
+        return cabina.clases_actividad.some(tipoNombre => {
+            const tipoNorm = ReservationFormHandler.normalizeString(tipoNombre);
+            // Buscar experiencia por nombre (tipo) y comparar su clase
+            const exp = experiencias.find(e => ReservationFormHandler.normalizeString(e.nombre) === tipoNorm);
+            if (exp && exp.clase) {
+                return ReservationFormHandler.normalizeString(exp.clase) === claseNorm;
+            }
+            // Si no existe la experiencia por nombre, también comparar directamente con la clase
+            return tipoNorm === claseNorm;
+        });
+    },
     // Inicializa eventos y configuraciones del formulario
     init() {
         const form = document.getElementById("reservationForm");
@@ -511,13 +529,8 @@ export const ReservationFormHandler = {
 
             const claseRequerida = ReservationFormHandler.normalizeString(experiencia.clase || "");
 
-            // Filtra cabinas compatibles
-            const cabinasCompatibles = cabinas.filter(c => {
-                const clases = Array.isArray(c.clases_actividad)
-                    ? c.clases_actividad.map(cl => ReservationFormHandler.normalizeString(cl))
-                    : [];
-                return clases.includes(claseRequerida);
-            });
+            // Filtra cabinas compatibles (correlacionando subtipos con la clase de la experiencia)
+            const cabinasCompatibles = cabinas.filter(c => ReservationFormHandler.cabinaSoportaClase(c, claseRequerida));
 
             // Filtra anfitriones compatibles (departamento spa)
             const anfitrionesCompatibles = anfitriones.filter(a => {
@@ -716,11 +729,8 @@ export const ReservationFormHandler = {
             return cumpleDepto && cumpleClase && cumpleHorario;
         });
 
-        // Filtra cabinas compatibles con clase
-        const cabinasCompatibles = (window.ReservasConfig.cabinas || []).filter(c => {
-            const clases = Array.isArray(c.clases_actividad) ? c.clases_actividad.map(cl => ReservationFormHandler.normalizeString(cl)) : [];
-            return clases.includes(claseRequerida);
-        });
+        // Filtra cabinas compatibles con clase (correlacionando subtipos con la clase de la experiencia)
+        const cabinasCompatibles = (window.ReservasConfig.cabinas || []).filter(c => ReservationFormHandler.cabinaSoportaClase(c, claseRequerida));
 
         // Actualiza opciones cabinas y anfitriones
         selectCabina.innerHTML = '<option value="">Selecciona cabina</option>';
