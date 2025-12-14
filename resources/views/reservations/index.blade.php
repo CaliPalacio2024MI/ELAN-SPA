@@ -369,15 +369,20 @@ document.addEventListener('DOMContentLoaded', function () {
         const experiencia = window.ReservasConfig.experiencias.find(e => e.id === experienciaId);
         if (!experiencia || !experiencia.clase) return;
 
-        const clase = experiencia.clase.toLowerCase();
+        const normalize = s => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+        const claseNorm = normalize(experiencia.clase || '');
 
         // Limpiar select de anfitriones
         selectAnfitrion.innerHTML = '<option value="">Selecciona anfitrión</option>';
 
-        // Filtrar anfitriones por clase (departamento)
-        const filtrados = todosLosAnfitriones.filter(anfitrion =>
-            anfitrion.departamento?.toLowerCase() === clase
-        );
+        // Filtrar anfitriones por clase (revisando clases_actividad del operativo)
+        const filtrados = todosLosAnfitriones.filter(anfitrion => {
+            const clases = Array.isArray(anfitrion.operativo?.clases_actividad)
+                ? anfitrion.operativo.clases_actividad
+                : (Array.isArray(anfitrion.clases_actividad) ? anfitrion.clases_actividad : []);
+            const clasesNorm = clases.map(c => normalize(c));
+            return clasesNorm.includes(claseNorm);
+        });
 
         // Agregar opciones al select
         filtrados.forEach(anfitrion => {
