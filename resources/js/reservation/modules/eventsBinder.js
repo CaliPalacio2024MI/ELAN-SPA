@@ -28,13 +28,15 @@ export const EventsBinder = {
             const hora = celda.getAttribute("data-hora");
             const anfitrion = celda.getAttribute("data-anfitrion");
 
-            let clase = "";
+            // --- INICIO DEL CAMBIO: Lógica simplificada para obtener especialidades ---
+            // Obtenemos la lista de especialidades (clases y/o subclases) directamente del anfitrión.
+            let especialidadesAnfitrion = [];
             const anfitrionInfo = window.ReservasConfig.anfitriones?.find(a => a.id == anfitrion);
-
             if (anfitrionInfo) {
-                const clases = (anfitrionInfo.operativo?.clases_actividad || anfitrionInfo.clases_actividad || []);
-                clase = clases.map(c => typeof c === "string" ? c.toLowerCase() : c.nombre?.toLowerCase()).join(',');
+                especialidadesAnfitrion = (anfitrionInfo.operativo?.clases_actividad || anfitrionInfo.clases_actividad || []);
             }
+            const clase = especialidadesAnfitrion.join(',');
+            // --- FIN DEL CAMBIO ---
 
             console.log("📥 Clase(s) encontrada(s):", clase);
 

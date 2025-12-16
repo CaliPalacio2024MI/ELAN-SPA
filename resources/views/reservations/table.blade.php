@@ -130,9 +130,7 @@
                               <td
                               data-hora="{{ $horaCompleta }}"
                               data-anfitrion="{{ $anfitrion->id }}"
-                              class="reserva-celda available"
-                              data-clase="{{ strtolower($anfitrion->operativo->clases_actividad[0] ?? '') }}"
-                             >
+                              class="reserva-celda available">
                               Disponible
                                </td>
                             @else
