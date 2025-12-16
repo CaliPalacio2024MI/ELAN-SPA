@@ -715,16 +715,68 @@ class ReservationController extends Controller
         return Cabina::where('id', $cabinaId)->where('spa_id', $spaId)->exists();
     }
         
-    public function historial()
+    public function historial(Request $request)
     {
-        $spaId = 1;
+        $spa = Spa::where('nombre', session('current_spa'))->first();
+        if (!$spa) {
+            return back()->withErrors(['spa' => 'No se encontró el spa actual en sesión.']);
+        }
 
-        $reservaciones = \App\Models\Reservation::with(['cliente', 'experiencia', 'cabina', 'anfitrion'])
-            ->where('spa_id', $spaId)
-            ->where('estado', 'activa')           
-            ->whereNotNull('check_out')
-            ->orderByDesc('fecha')
-            ->get();
+        $query = Reservation::with(['cliente', 'experiencia', 'cabina', 'anfitrion'])
+            ->where('spa_id', $spa->id);
+
+        // Filtrar por rango de fechas
+        if ($request->filled('desde')) {
+            $query->whereDate('fecha', '>=', $request->input('desde'));
+        }
+
+        if ($request->filled('hasta')) {
+            $query->whereDate('fecha', '<=', $request->input('hasta'));
+        }
+
+        // Filtros por relaciones
+        if ($request->filled('cliente')) {
+            $cliente = trim($request->input('cliente'));
+            $query->whereHas('cliente', function ($q) use ($cliente) {
+                $q->where('nombre', 'like', "%{$cliente}%")
+                  ->orWhere('apellido_paterno', 'like', "%{$cliente}%")
+                  ->orWhere('apellido_materno', 'like', "%{$cliente}%");
+            });
+        }
+
+        if ($request->filled('experiencia')) {
+            $exp = trim($request->input('experiencia'));
+            $query->whereHas('experiencia', function ($q) use ($exp) {
+                $q->where('nombre', 'like', "%{$exp}%");
+            });
+        }
+
+        if ($request->filled('cabina')) {
+            $cab = trim($request->input('cabina'));
+            $query->whereHas('cabina', function ($q) use ($cab) {
+                $q->where('nombre', 'like', "%{$cab}%");
+            });
+        }
+
+        if ($request->filled('anfitrion')) {
+            $anfi = trim($request->input('anfitrion'));
+            $query->whereHas('anfitrion', function ($q) use ($anfi) {
+                $q->where('nombre_usuario', 'like', "%{$anfi}%");
+            });
+        }
+
+        // Estado de pago — normalizar y aplicar si el parámetro existe y no está vacío
+        $pagado = $request->input('pagado');
+        if (!is_null($pagado) && trim($pagado) !== '') {
+            $pagado = strtolower(trim($pagado));
+            if ($pagado === 'pagado') {
+                $query->where('check_out', true);
+            } elseif ($pagado === 'pendiente') {
+                $query->where('check_out', false);
+            }
+        }
+
+        $reservaciones = $query->orderByDesc('fecha')->orderBy('hora')->get();
 
         return view('reservations.historial.historial', compact('reservaciones'));
     }

@@ -40,36 +40,36 @@
         <form method="GET" action="{{ route('reservations.historial') }}" class="filtro-form" style="display:flex;gap:0.75rem;flex-wrap:wrap;align-items:end;padding:0.75rem;">
             <div>
                 <label for="desde">Desde</label>
-                <input type="date" id="desde" name="desde" value="{{ request('desde') }}">
+                <input type="date" id="desde" name="desde" value="{{ request('desde') }}" class="form-control search-input">
             </div>
             <div>
                 <label for="hasta">Hasta</label>
-                <input type="date" id="hasta" name="hasta" value="{{ request('hasta') }}">
+                <input type="date" id="hasta" name="hasta" value="{{ request('hasta') }}" class="form-control search-input">
             </div>
 
             <div>
                 <label for="cliente">Cliente</label>
-                <input type="text" id="cliente" name="cliente" placeholder="Nombre o apellido" value="{{ request('cliente') }}">
+                <input type="text" id="cliente" name="cliente" placeholder="Nombre o apellido" value="{{ request('cliente') }}" class="form-control search-input">
             </div>
 
             <div>
                 <label for="experiencia">Experiencia</label>
-                <input type="text" id="experiencia" name="experiencia" placeholder="Nombre de experiencia" value="{{ request('experiencia') }}">
+                <input type="text" id="experiencia" name="experiencia" placeholder="Nombre de experiencia" value="{{ request('experiencia') }}" class="form-control search-input">
             </div>
 
             <div>
                 <label for="cabina">Cabina</label>
-                <input type="text" id="cabina" name="cabina" placeholder="Cabina" value="{{ request('cabina') }}">
+                <input type="text" id="cabina" name="cabina" placeholder="Cabina" value="{{ request('cabina') }}" class="form-control search-input">
             </div>
 
             <div>
                 <label for="anfitrion">Anfitrión</label>
-                <input type="text" id="anfitrion" name="anfitrion" placeholder="Usuario anfitrión" value="{{ request('anfitrion') }}">
+                <input type="text" id="anfitrion" name="anfitrion" placeholder="Usuario anfitrión" value="{{ request('anfitrion') }}" class="form-control search-input">
             </div>
 
             <div>
                 <label for="pagado">Estado pago</label>
-                <select id="pagado" name="pagado">
+                <select id="pagado" name="pagado" class="form-select search-input">
                     <option value="">Todos</option>
                     <option value="pagado" {{ request('pagado') == 'pagado' ? 'selected' : '' }}>Pagado</option>
                     <option value="pendiente" {{ request('pagado') == 'pendiente' ? 'selected' : '' }}>Pendiente</option>
@@ -77,9 +77,21 @@
             </div>
 
             <div style="display:flex;gap:0.5rem;align-items:center;">
-                <button type="submit" class="btn btn-primary">Filtrar</button>
-                <a href="{{ route('reports.export.tipo', ['tipo' => 'checkouts', 'desde' => request('desde'), 'hasta' => request('hasta')]) }}" class="btn btn-outline-success">
-                    <i class="fas fa-file-excel"></i> Exportar
+                <button type="submit" class="btns">Filtrar</button>
+                @php
+                    $exportParams = ['tipo' => 'checkouts'];
+                    foreach (['desde','hasta','cliente','experiencia','cabina','anfitrion','pagado'] as $p) {
+                        $val = request($p);
+                        if (!is_null($val) && $val !== '') {
+                            $exportParams[$p] = $val;
+                        }
+                    }
+                @endphp
+                <a href="{{ route('reports.export.tipo', $exportParams) }}"
+                   class="btn-export-section tiny-download"
+                   data-export-type="checkouts"
+                   title="Exportar historial a Excel">
+                    <i class="fas fa-download"></i>
                 </a>
             </div>
         </form>

@@ -219,9 +219,50 @@ class ReportController extends Controller
 
                 $query = Reservation::with('cliente', 'experiencia')
                     ->whereBetween('fecha', [$fechaInicio, $fechaFin])
-                    ->where($estadoField[0], $estadoField[1])
+                    // Aplicar la condición por tipo sólo si el filtro 'pagado' NO fue enviado desde la vista.
+                    ->when($request->input('pagado') === null, fn($q) => $q->where($estadoField[0], $estadoField[1]))
                     ->when($spaId, fn($q) => $q->where('spa_id', $spaId))
                     ->when($servicio, fn($q) => $q->where('experiencia_id', $servicio));
+
+                // Aplicar filtros que vienen desde la vista de historial
+                if ($request->filled('cliente')) {
+                    $clienteFiltro = trim($request->input('cliente'));
+                    $query->whereHas('cliente', function ($cq) use ($clienteFiltro) {
+                        $cq->where('nombre', 'like', "%{$clienteFiltro}%")
+                           ->orWhere('apellido_paterno', 'like', "%{$clienteFiltro}%")
+                           ->orWhere('apellido_materno', 'like', "%{$clienteFiltro}%");
+                    });
+                }
+
+                if ($request->filled('experiencia')) {
+                    $expFiltro = trim($request->input('experiencia'));
+                    $query->whereHas('experiencia', function ($eq) use ($expFiltro) {
+                        $eq->where('nombre', 'like', "%{$expFiltro}%");
+                    });
+                }
+
+                if ($request->filled('cabina')) {
+                    $cabFiltro = trim($request->input('cabina'));
+                    $query->whereHas('cabina', function ($cbq) use ($cabFiltro) {
+                        $cbq->where('nombre', 'like', "%{$cabFiltro}%");
+                    });
+                }
+
+                if ($request->filled('anfitrion')) {
+                    $anfiFiltro = trim($request->input('anfitrion'));
+                    $query->whereHas('anfitrion', function ($aq) use ($anfiFiltro) {
+                        $aq->where('nombre_usuario', 'like', "%{$anfiFiltro}%");
+                    });
+                }
+
+                if ($request->filled('pagado')) {
+                    $pagadoFiltro = $request->input('pagado');
+                    if ($pagadoFiltro === 'pagado') {
+                        $query->where('check_out', true);
+                    } elseif ($pagadoFiltro === 'pendiente') {
+                        $query->where('check_out', false);
+                    }
+                }
 
                 if ($searchTerm) {
                     $query->where(function($q) use ($searchTerm) {
