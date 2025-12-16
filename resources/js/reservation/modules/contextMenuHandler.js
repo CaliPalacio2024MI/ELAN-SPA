@@ -71,10 +71,20 @@ export const ContextMenuHandler = {
 
         // Filtra experiencias según clases del anfitrión
         todas.forEach(exp => {
+            // --- INICIO DEL CAMBIO: Lógica de filtrado dual ---
             const claseExp = (exp.clase || "").toLowerCase().trim();
-            console.log(`🔍 Revisando experiencia: ${exp.nombre} | clase: ${claseExp}`);
+            const nombreExp = (exp.nombre || "").toLowerCase().trim();
 
-            if (clasesAnfitrion.includes(claseExp)) {
+            // Condición 1: La experiencia (subclase) está explícitamente en la lista del anfitrión.
+            // Esto funciona para anfitriones con subclases asignadas (ej: 'masaje de codos').
+            const esSubclaseDirecta = clasesAnfitrion.includes(nombreExp);
+
+            // Condición 2: La clase principal de la experiencia está en la lista del anfitrión.
+            // Esto mantiene la compatibilidad con anfitriones que tienen la clase principal (ej: 'experiencias').
+            const perteneceAClasePrincipal = clasesAnfitrion.includes(claseExp);
+
+            if (esSubclaseDirecta || perteneceAClasePrincipal) {
+                // --- FIN DEL CAMBIO ---
                 const opt = document.createElement("option");
                 opt.value = exp.id;
                 opt.textContent = `${exp.nombre} - ${exp.duracion} min - $${exp.precio}`;
