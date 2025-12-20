@@ -1,10 +1,15 @@
 /* ============================
    ENCABEZADO Y LAYOUT GENERAL
 ============================= */
-body.sidebar-hover .table-container {
-    margin-left: 120px;  
+/* Fuente */
+body, html {
+    font-family: 'Kumbh Sans', sans-serif;
+}
+
+.sidebar:hover ~ .container .table-container {
+    margin-left: 20px;
     margin-right: 50px;
-    width: calc(100vw - 360px);  
+    width: calc(100% - 40px);
     transition: margin-left 0.3s ease, width 0.3s ease;
 }
 
@@ -19,6 +24,27 @@ main {
     gap: 20px;
     flex-wrap: wrap;
     justify-content: center;
+}
+
+/* Cuando el sidebar se expande, mover el `main` */
+.sidebar:hover ~ .container main {
+    margin-left: 290px;
+    transition: margin-left 0.3s ease;
+}
+
+/* Asegurar transiciones para cuando el cursor sale del sidebar (mouse leave) */
+/* Aplicamos transiciones en los elementos que cambian de tamaño/márgenes */
+.sidebar,
+.container,
+.container main,
+.container .table-container {
+    transition: margin-left 0.3s ease, width 0.3s ease;
+}
+
+/* Compatibilidad: si algún CSS global establece reglas distintas, aumentamos especificidad */
+.sidebar:hover ~ .container main,
+.sidebar:hover ~ .container .table-container {
+    transition: margin-left 0.3s ease, width 0.3s ease;
 }
 
 .main-header {
@@ -151,6 +177,88 @@ th, td {
 
 .btn-primary:hover i {
     color: white !important;
+}
+
+/* Estilos consistentes con el resto del proyecto */
+.btns,
+.btn-nuevo-cliente {
+    background-color: #BC8A55;
+    border: none;
+    color: white;
+    font-size: 16px;
+    font-weight: bold;
+    padding: 10px 30px;
+    border-radius: 30px;
+    transition: background 0.3s ease;
+}
+
+.btns:hover,
+.btn-nuevo-cliente:hover {
+    background-color: #092034 !important;
+    color: white !important;
+}
+
+/* Botón de exportar */
+.btn-export-section {
+    background-color: #BC8A55;
+    color: white;
+    border: none;
+    font-weight: bold;
+    padding: 6px 10px;
+    border-radius: 5px;
+    transition: background 0.3s ease;
+    font-size: 1rem;
+    line-height: 1;
+    height: 18px;
+    display: inline-flex;
+    align-items: center;
+    text-decoration: none;
+}
+
+.btn-export-section:hover {
+    background-color: #092034;
+}
+
+/* Variante pequeña para icon-only export links */
+.tiny-download {
+    padding: 10px 30px;
+    height: 18px;
+    border-radius: 30px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+    color: white;
+}
+
+.search-input {
+    padding: 10px;
+    border-radius: 5px;
+    border: 1px solid #ccc;
+    font-size: 1rem;
+    color: #333;
+}
+
+.form-select.search-input {
+    height: 36px;
+    padding: 6px 10px;
+}
+
+/* Estilo de tipografía */
+.filtro-form label {
+    text-align: left;
+    font-size: 1rem;
+    font-weight: 600;
+    color: #092034;
+}
+
+.filtro-form input,
+.filtro-form select {
+    padding: 10px;
+    border-radius: 5px;
+    border: 1px solid #ccc;
+    font-size: 1rem;
+    color: #333;
 }
 
 .btn-success {
