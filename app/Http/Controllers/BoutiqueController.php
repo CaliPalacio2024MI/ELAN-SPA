@@ -14,9 +14,23 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Cache;
 use Exception;
 use Carbon\Carbon;
+use App\Models\Setting;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Validator;
 
 class BoutiqueController extends Controller
 {
+    /**
+     * Verifica si el usuario autenticado es un "master".
+     *
+     * @return bool
+     */
+    private function isMasterUser(): bool
+    {
+        // Lógica de usuario "master" basada en el rol del usuario, según lo especificado.
+        return Auth::check() && Auth::user()->rol === 'master';
+    }
+
     /* ----- Vistas ----- */
     public function venta()
     {
@@ -96,15 +110,16 @@ class BoutiqueController extends Controller
         // Generar nuevo folio: PAL-VEN-2025-00001
         $folioVenta = "$prefijoHotel-VEN-$year-$nuevoNumero";
 
-        return view('boutique.venta', compact(
-            'anfitriones',
-            'settings',
-            'articulos',
-            'compra',
-            'formas_pago',
-            'folioVenta',
-            'hotel' // Agregado: para mostrar información del hotel en la vista
-        ));
+        return view('boutique.venta', [
+            'anfitriones' => $anfitriones,
+            'settings' => $settings,
+            'articulos' => $articulos,
+            'compra' => $compra,
+            'formas_pago' => $formas_pago,
+            'folioVenta' => $folioVenta,
+            'hotel' => $hotel,
+            'isMaster' => $this->isMasterUser(), // Pasa la bandera a la vista
+        ]);
     }
 
     public function inventario(Request $request)
@@ -887,6 +902,48 @@ class BoutiqueController extends Controller
                 'message' => $e->getMessage()
             ], 400);
         }
+    }
+
+    public function verificarPasswordDescuento(Request $request)
+    {
+        $request->validate(['password' => 'required|string']);
+
+        $setting = Setting::find('discount_password');
+        if ($setting && Hash::check($request->password, $setting->value)) {
+            return response()->json(['success' => true]);
+        }
+
+        return response()->json(['success' => false, 'message' => 'Contraseña incorrecta.'], 401);
+    }
+
+    public function cambiarPasswordDescuento(Request $request)
+    {
+        // Solo usuarios master pueden cambiar la contraseña
+        if (!$this->isMasterUser()) {
+            return response()->json(['message' => 'No tienes permiso para realizar esta acción.'], 403);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'old_password' => 'required|string',
+            'new_password' => 'required|string|min:8|confirmed',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['errors' => $validator->errors()], 422);
+        }
+
+        $setting = Setting::find('discount_password');
+
+        // Verificar contraseña antigua
+        if (!$setting || !Hash::check($request->old_password, $setting->value)) {
+            return response()->json(['message' => 'La contraseña antigua es incorrecta.'], 401);
+        }
+
+        // Actualizar contraseña
+        $setting->value = Hash::make($request->new_password);
+        $setting->save();
+
+        return response()->json(['success' => true, 'message' => 'Contraseña actualizada exitosamente.']);
     }
 
     public function nuevoArticulo(Request $request)

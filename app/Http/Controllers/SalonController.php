@@ -57,7 +57,9 @@ class SalonController extends Controller
         $grupoReservaIdsSalon = $reservacionesSalon->pluck('grupo_reserva_id')->filter()->unique();
 
          // Filtrar las ventas (Sale) usando ambos IDs: individuales y de grupo
+         // NO filtramos por fecha ni spa_id aquí, para encontrar el pago sin importar cuándo o dónde se hizo
         $ventasSalon = Sale::query()
+             ->where('spa_id', $spaId)
              ->whereBetween('created_at', [$fechaInicio, $fechaFin])
              ->where(function ($query) use ($reservationIdsSalon, $grupoReservaIdsSalon) {
                // Condición para ventas individuales
@@ -66,17 +68,28 @@ class SalonController extends Controller
               ->orWhereIn('grupo_reserva_id', $grupoReservaIdsSalon);
             })
             ->get();
+
+        // Identificar IDs de reservaciones que tienen venta (pagadas)
+        $idsPagados = $ventasSalon->pluck('reservacion_id')->toArray();
+        $idsGruposPagados = $ventasSalon->pluck('grupo_reserva_id')->filter()->toArray();
+
+        // Función auxiliar para verificar si una reserva está pagada
+        $esPagada = function ($reserva) use ($idsPagados, $idsGruposPagados) {
+            return in_array($reserva->id, $idsPagados) || 
+                   ($reserva->grupo_reserva_id && in_array($reserva->grupo_reserva_id, $idsGruposPagados));
+        };
+
         //  Totales generales
         $totales = [
             'reservaciones_totales' => $reservacionesSalon->count(),
-            'reservaciones_pagadas' => $reservacionesSalon->whereNotNull('check_out')->count(),
-            'reservaciones_no_pagadas' => $reservacionesSalon->whereNull('check_out')->count(),
+            'reservaciones_pagadas' => $reservacionesSalon->filter($esPagada)->count(),
+            'reservaciones_no_pagadas' => $reservacionesSalon->reject($esPagada)->count(),
             'ventas_total' => $ventasSalon->sum('total'),
             'ventas_propina' => $ventasSalon->sum('propina'),
         ];
 
         //  Agrupar por fecha
-        $reporteDias = $reservacionesSalon->groupBy('fecha')->map(function ($reservas, $fecha) {
+        $reporteDias = $reservacionesSalon->groupBy('fecha')->map(function ($reservas, $fecha) use ($esPagada) {
             // Contar reservas por horario
             $manana = $reservas->filter(fn($r) => $r->hora >= '08:00' && $r->hora < '12:00')->count();
             $medioDia = $reservas->filter(fn($r) => $r->hora >= '12:00' && $r->hora < '16:00')->count();
@@ -86,8 +99,8 @@ class SalonController extends Controller
                 'fecha' => $fecha,
                 'dia_semana' => Carbon::parse($fecha)->locale('es')->isoFormat('dddd'),
                 'total' => $reservas->count(),
-                'pagadas' => $reservas->whereNotNull('check_out')->count(),
-                'no_pagadas' => $reservas->whereNull('check_out')->count(),
+                'pagadas' => $reservas->filter($esPagada)->count(),
+                'no_pagadas' => $reservas->reject($esPagada)->count(),
                 'manana' => $manana,
                 'medio_dia' => $medioDia,
                 'tarde' => $tarde,
