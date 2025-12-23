@@ -82,7 +82,6 @@
                             <h3 class="titulo">Clientes</h3>
                             <div class="report-controls" style="display: none;">
                                 <div class="report-filters">
-                                    <label>Buscar</label>
                                     <div class="search-container">
                                         <input type="text" class="local-filter" name="search" placeholder="Buscar...">
                                         <button class="btn-search"><i class="fas fa-search"></i></button>
@@ -110,7 +109,6 @@
                             <h3 class="titulo">Terapeutas</h3>
                             <div class="report-controls" style="display: none;">
                                 <div class="report-filters">
-                                    <label>Buscar</label>
                                     <div class="search-container">
                                         <input type="text" class="local-filter" name="search" placeholder="Buscar...">
                                         <button class="btn-search"><i class="fas fa-search"></i></button>
@@ -133,7 +131,6 @@
                             <h3 class="titulo">Propinas</h3>
                             <div class="report-controls" style="display: none;">
                                 <div class="report-filters">
-                                    <label>Buscar</label>
                                     <div class="search-container">
                                         <input type="text" class="local-filter" name="search" placeholder="Buscar...">
                                         <button class="btn-search"><i class="fas fa-search"></i></button>
@@ -156,7 +153,6 @@
                             <h3 class="titulo">Servicios</h3>
                             <div class="report-controls" style="display: none;">
                                 <div class="report-filters">
-                                    <label>Buscar</label>
                                     <div class="search-container">
                                         <input type="text" class="local-filter" name="search" placeholder="Buscar...">
                                         <button class="btn-search"><i class="fas fa-search"></i></button>
@@ -181,7 +177,6 @@
                             <h3 class="titulo">No Shows</h3>
                             <div class="report-controls" style="display: none;">
                                 <div class="report-filters">
-                                    <label>Buscar</label>
                                     <div class="search-container">
                                         <input type="text" class="local-filter" name="search" placeholder="Buscar...">
                                         <button class="btn-search"><i class="fas fa-search"></i></button>
@@ -204,7 +199,6 @@
                             <h3 class="titulo">Anfitriones</h3>
                             <div class="report-controls" style="display: none;">
                                 <div class="report-filters">
-                                    <label>Buscar</label>
                                     <div class="search-container">
                                         <input type="text" class="local-filter" name="search" placeholder="Buscar...">
                                         <button class="btn-search"><i class="fas fa-search"></i></button>
@@ -233,7 +227,6 @@
                             <h3 class="titulo">Detalle de Ventas</h3>
                             <div class="report-controls" style="display: none;">
                                 <div class="report-filters">
-                                    <label>Buscar</label>
                                     <div class="search-container">
                                         <input type="text" class="local-filter" name="search" placeholder="Buscar...">
                                         <button class="btn-search"><i class="fas fa-search"></i></button>

@@ -72,14 +72,33 @@ export const EventsBinder = {
             event.preventDefault();
 
             const reservaId = celda.getAttribute("data-reserva-id");
-            const checkIn = celda.getAttribute("data-check-in") || "0";
+            const checkIn = celda.getAttribute("data-check-in"); // "1" o "0"
+            const checkOut = celda.getAttribute("data-check-out"); // "1" o "0"
 
             document.getElementById("editarOpcion")?.setAttribute("data-reserva-id", reservaId);
             document.getElementById("eliminarOpcion")?.setAttribute("data-reserva-id", reservaId);
-            document.getElementById("checkinOpcion")?.setAttribute("data-reserva-id", reservaId);
-            document.getElementById("checkinOpcion")?.setAttribute("data-check-in", checkIn);
-            document.getElementById('checkoutOpcion')?.setAttribute('data-reserva-id', reservaId);
 
+            const checkinOpcion = document.getElementById("checkinOpcion");
+            if (checkinOpcion) {
+                checkinOpcion.setAttribute("data-reserva-id", reservaId);
+                // Ocultar si ya se hizo check-in
+                if (checkIn === '1') {
+                    checkinOpcion.style.display = 'none';
+                } else {
+                    checkinOpcion.style.display = 'block';
+                }
+            }
+
+            const checkoutOpcion = document.getElementById("checkoutOpcion");
+            if (checkoutOpcion) {
+                checkoutOpcion.setAttribute('data-reserva-id', reservaId);
+                // Mostrar solo si se hizo check-in y no check-out
+                if (checkIn === '1' && checkOut !== '1') {
+                    checkoutOpcion.style.display = 'block';
+                } else {
+                    checkoutOpcion.style.display = 'none';
+                }
+            }
             this.mostrarMenuContextual("contextMenuReserved", event);
         });
     },

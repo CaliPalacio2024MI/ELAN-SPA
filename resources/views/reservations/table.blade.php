@@ -11,6 +11,9 @@
                     @endphp
                     <th class="{{ $esSalon ? 'encabezado-salon' : '' }}">
                         {{ $anfitrion->nombre_usuario }} {{ $anfitrion->apellido_paterno }}
+                        @if ($anfitrion->operativo && !empty($anfitrion->operativo->clases_actividad))
+                            <i class="fas fa-question-circle" title="{{ implode(', ', $anfitrion->operativo->clases_actividad) }}" style="margin-left: 5px; cursor: pointer;"></i>
+                        @endif
                     </th>
                 @endforeach
             </tr>
@@ -65,10 +68,12 @@
                                     $saltos[$anfitrion->id] = $rowspan - 1; // Saltar siguientes celdas para esta reserva
                                 @endphp
                                 <td 
+                                    draggable="true"
                                     data-hora="{{ $horaCompleta }}" 
                                     data-anfitrion="{{ $anfitrion->id }}"
                                     data-reserva-id="{{ $reserva->id }}" 
                                     data-check-in="{{ $reserva->check_in ? 1 : 0 }}"
+                                    data-check-out="{{ $reserva->check_out ? 1 : 0 }}"
                                     class="reserva-celda occupied"
                                     rowspan="{{ $rowspan }}"
                                     style="background-color: {{ $reserva->experiencia->color ?? '#ccc' }}"
