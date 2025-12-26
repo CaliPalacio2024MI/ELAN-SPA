@@ -320,6 +320,43 @@
     border: 1px solid #ccc;
 }
 
+/* Estilo para el contenedor del buscador para unir input y botón */
+.report-filters .search-container {
+    display: flex;
+    align-items: center;
+}
+
+/* Ajustes para el input dentro del contenedor de búsqueda */
+.report-filters .search-container .local-filter {
+    border-color: #dee2e6;
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+    border-right: none;
+}
+
+/* Estilo para el botón de búsqueda */
+.report-filters .search-container .btn-search {
+    padding: 5px 10px;
+    border: 1px solid #dee2e6;
+    background-color: #dee2e6;
+    color: white;
+    cursor: pointer;
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+    border-top-right-radius: 5px;
+    border-bottom-right-radius: 5px;
+    transition: background-color 0.3s ease, border-color 0.3s ease;
+}
+
+.report-filters .search-container .btn-search:hover {
+    background-color: #092034;
+    border-color: #092034;
+}
+
+.report-filters .search-container .btn-search i {
+    color: rgb(0, 0, 0);
+}
+
 /* Botón de Exportar/Importar en reportes */
 .btn-export-section {
     background-color: #BC8A55;
@@ -421,6 +458,7 @@
 }
 .report-main-content {
     flex: 1; 
+    overflow: auto;
 }
 .reports-inline { margin-top: 0; }
 

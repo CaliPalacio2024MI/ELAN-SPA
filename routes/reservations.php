@@ -46,13 +46,7 @@ Route::middleware(['auth', 'role:master,administrador,recepcionista'])->group(fu
     Route::get('/reportes/exportar', [ReportController::class, 'export'])->name('reports.export');
     Route::get('/reportes/exportar/{tipo}', [ReportController::class, 'exportTipo'])->name('reports.export.tipo');
 
-    Route::get('/reservations/historial', [ReservationController::class, 'historial'])->name('reservations.historial');
-
-    Route::get('/prueba', function () {
-    return view('reservations.historial.historial');
 });
-});
-
 
 
 
