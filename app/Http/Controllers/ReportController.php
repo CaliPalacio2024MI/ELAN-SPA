@@ -186,7 +186,7 @@ class ReportController extends Controller
     {
         $fechaInicio = $request->input('desde') ?? now()->startOfMonth()->toDateString();
         $fechaFin = $request->input('hasta') ?? now()->endOfMonth()->toDateString();
-        $search = $request->input('search');
+        $search = $request->input('search') ?? $request->input('busqueda');
         $servicio = $request->input('servicio');
 
         $spaId = $request->input('lugar');
@@ -201,7 +201,7 @@ class ReportController extends Controller
 
         $datos = [];
         $filename = "reporte_" . $tipo . "_" . now()->format('Ymd_His') . ".xls";
-        $content = '<table><thead><tr>';
+        $content = '<table border="1"><thead><tr>';
 
         $searchTerm = $search ? mb_strtolower($search, 'UTF-8') : null;
 
@@ -210,17 +210,19 @@ class ReportController extends Controller
             case 'cancelados':
             case 'checkins':
             case 'checkouts':
+            case 'historial':
                 $estadoField = match($tipo) {
                     'activos'     => ['estado', 'activa'],
                     'cancelados'  => ['estado', 'cancelada'],
                     'checkins'    => ['check_in', true],
                     'checkouts'   => ['check_out', true],
+                    'historial'   => null,
                 };
 
                 $query = Reservation::with('cliente', 'experiencia')
                     ->whereBetween('fecha', [$fechaInicio, $fechaFin])
                     // Aplicar la condición por tipo sólo si el filtro 'pagado' NO fue enviado desde la vista.
-                    ->when($request->input('pagado') === null, fn($q) => $q->where($estadoField[0], $estadoField[1]))
+                    ->when($request->input('pagado') === null && $estadoField !== null, fn($q) => $q->where($estadoField[0], $estadoField[1]))
                     ->when($spaId, fn($q) => $q->where('spa_id', $spaId))
                     ->when($servicio, fn($q) => $q->where('experiencia_id', $servicio));
 
@@ -274,7 +276,13 @@ class ReportController extends Controller
                         })
                         ->orWhere('fecha', 'like', "%{$searchTerm}%")
                         ->orWhere('hora', 'like', "%{$searchTerm}%")
-                        ->orWhere('estado', 'like', "%{$searchTerm}%");
+                        ->orWhere('estado', 'like', "%{$searchTerm}%")
+                        ->orWhereHas('cabina', function ($cbq) use ($searchTerm) {
+                            $cbq->where(DB::raw('LOWER(nombre)'), 'like', "%{$searchTerm}%");
+                        })
+                        ->orWhereHas('anfitrion', function ($aq) use ($searchTerm) {
+                            $aq->where(DB::raw('LOWER(nombre_usuario)'), 'like', "%{$searchTerm}%");
+                        });
                     });
                 }
                 $datos = $query->get();
@@ -288,7 +296,7 @@ class ReportController extends Controller
                         <td>" . htmlspecialchars($r->experiencia->nombre ?? '-') . "</td>
                         <td>" . htmlspecialchars($r->fecha) . "</td>
                         <td>" . htmlspecialchars(substr($r->hora, 0, 5)) . "</td>
-                        <td>" . htmlspecialchars(ucfirst($r->estado)) . "</td>
+                        <td>" . ($r->check_out ? 'Pagado' : 'Pendiente') . "</td>
                     </tr>";
                 }
                 break;

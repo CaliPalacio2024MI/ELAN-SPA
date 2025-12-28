@@ -48,23 +48,8 @@
             </div>
 
             <div>
-                <label for="cliente">Cliente</label>
-                <input type="text" id="cliente" name="cliente" placeholder="Nombre o apellido" value="{{ request('cliente') }}" class="form-control search-input">
-            </div>
-
-            <div>
-                <label for="experiencia">Experiencia</label>
-                <input type="text" id="experiencia" name="experiencia" placeholder="Nombre de experiencia" value="{{ request('experiencia') }}" class="form-control search-input">
-            </div>
-
-            <div>
-                <label for="cabina">Cabina</label>
-                <input type="text" id="cabina" name="cabina" placeholder="Cabina" value="{{ request('cabina') }}" class="form-control search-input">
-            </div>
-
-            <div>
-                <label for="anfitrion">Anfitrión</label>
-                <input type="text" id="anfitrion" name="anfitrion" placeholder="Usuario anfitrión" value="{{ request('anfitrion') }}" class="form-control search-input">
+                <label for="busqueda">Buscar</label>
+                <input type="text" id="busqueda" name="busqueda" placeholder="Cliente, experiencia, cabina..." value="{{ request('busqueda') }}" class="form-control search-input">
             </div>
 
             <div>
@@ -79,8 +64,8 @@
             <div style="display:flex;gap:0.5rem;align-items:center;">
                 <button type="submit" class="btns">Filtrar</button>
                 @php
-                    $exportParams = ['tipo' => 'checkouts'];
-                    foreach (['desde','hasta','cliente','experiencia','cabina','anfitrion','pagado'] as $p) {
+                    $exportParams = ['tipo' => 'historial'];
+                    foreach (['desde','hasta','busqueda','pagado'] as $p) {
                         $val = request($p);
                         if (!is_null($val) && $val !== '') {
                             $exportParams[$p] = $val;
@@ -108,8 +93,7 @@
                 <th>Anfitrión</th>
                 <th>Fecha</th>
                 <th>Hora</th>
-                <th>Grupo Reserva</th>
-                <th>Pagado?</th>
+                <th>Estado</th>
                 <th>Acciones</th>
             </tr>
         </thead>
@@ -128,7 +112,6 @@
                     <td>{{ $reserva->anfitrion?->nombre_usuario ?? '—' }}</td>
                     <td>{{ \Carbon\Carbon::parse($reserva->fecha)->format('d/m/Y') }}</td>
                     <td>{{ $reserva->hora }}</td>
-                    <td>{{ $reserva->grupo_reserva_id ?? '—' }}</td>
                     <td>
                         @if ($reserva->check_out)
                             <span class="badge bg-success">Pagado</span>

@@ -934,34 +934,24 @@ class ReservationController extends Controller
             $query->whereDate('fecha', '<=', $request->input('hasta'));
         }
 
-        // Filtros por relaciones
-        if ($request->filled('cliente')) {
-            $cliente = trim($request->input('cliente'));
-            $query->whereHas('cliente', function ($q) use ($cliente) {
-                $q->where('nombre', 'like', "%{$cliente}%")
-                  ->orWhere('apellido_paterno', 'like', "%{$cliente}%")
-                  ->orWhere('apellido_materno', 'like', "%{$cliente}%");
-            });
-        }
-
-        if ($request->filled('experiencia')) {
-            $exp = trim($request->input('experiencia'));
-            $query->whereHas('experiencia', function ($q) use ($exp) {
-                $q->where('nombre', 'like', "%{$exp}%");
-            });
-        }
-
-        if ($request->filled('cabina')) {
-            $cab = trim($request->input('cabina'));
-            $query->whereHas('cabina', function ($q) use ($cab) {
-                $q->where('nombre', 'like', "%{$cab}%");
-            });
-        }
-
-        if ($request->filled('anfitrion')) {
-            $anfi = trim($request->input('anfitrion'));
-            $query->whereHas('anfitrion', function ($q) use ($anfi) {
-                $q->where('nombre_usuario', 'like', "%{$anfi}%");
+        // Filtro general (Buscador unificado)
+        if ($request->filled('busqueda')) {
+            $search = trim($request->input('busqueda'));
+            $query->where(function($q) use ($search) {
+                $q->whereHas('cliente', function ($q2) use ($search) {
+                    $q2->where('nombre', 'like', "%{$search}%")
+                      ->orWhere('apellido_paterno', 'like', "%{$search}%")
+                      ->orWhere('apellido_materno', 'like', "%{$search}%");
+                })
+                ->orWhereHas('experiencia', function ($q2) use ($search) {
+                    $q2->where('nombre', 'like', "%{$search}%");
+                })
+                ->orWhereHas('cabina', function ($q2) use ($search) {
+                    $q2->where('nombre', 'like', "%{$search}%");
+                })
+                ->orWhereHas('anfitrion', function ($q2) use ($search) {
+                    $q2->where('nombre_usuario', 'like', "%{$search}%");
+                });
             });
         }
 
