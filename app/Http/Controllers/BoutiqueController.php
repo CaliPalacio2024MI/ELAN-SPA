@@ -28,7 +28,7 @@ class BoutiqueController extends Controller
     private function isMasterUser(): bool
     {
         // Lógica de usuario "master" basada en el rol del usuario, según lo especificado.
-        return Auth::check() && Auth::user()->rol === 'master';
+        return Auth::check() && in_array(Auth::user()->rol, ['master', 'administrador']);
     }
 
     /* ----- Vistas ----- */
@@ -918,7 +918,7 @@ class BoutiqueController extends Controller
 
     public function cambiarPasswordDescuento(Request $request)
     {
-        // Solo usuarios master pueden cambiar la contraseña
+        // Solo usuarios master o administradores pueden cambiar la contraseña
         if (!$this->isMasterUser()) {
             return response()->json(['message' => 'No tienes permiso para realizar esta acción.'], 403);
         }
