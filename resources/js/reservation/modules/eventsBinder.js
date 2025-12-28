@@ -11,97 +11,365 @@ export const EventsBinder = {
         this.asignarEventosCeldas();
     },
 
-    // Asigna eventos para clicks y menú contextual en celdas
-    asignarEventosCeldas() {
-        const tabla = document.getElementById("tabla-reservaciones");
-        const modal = document.getElementById("reservationDetailsModal");
-        const modalContent = document.getElementById("reservationDetails");
+        // Asigna eventos para clicks y menú contextual en celdas
 
-        // Evento menú contextual para celdas disponibles (.available)
-        tabla?.addEventListener("contextmenu", (event) => {
-            const celda = event.target.closest(".available");
-            if (!celda) return;
-            event.preventDefault();
+        asignarEventosCeldas() {
 
-            celdaSeleccionada = celda;
+            const tabla = document.getElementById("tabla-reservaciones");
 
-            const hora = celda.getAttribute("data-hora");
-            const anfitrion = celda.getAttribute("data-anfitrion");
+            const modal = document.getElementById("reservationDetailsModal");
 
-            // --- INICIO DEL CAMBIO: Lógica simplificada para obtener especialidades ---
-            // Obtenemos la lista de especialidades (clases y/o subclases) directamente del anfitrión.
-            let especialidadesAnfitrion = [];
-            const anfitrionInfo = window.ReservasConfig.anfitriones?.find(a => a.id == anfitrion);
-            if (anfitrionInfo) {
-                especialidadesAnfitrion = (anfitrionInfo.operativo?.clases_actividad || anfitrionInfo.clases_actividad || []);
-            }
-            const clase = especialidadesAnfitrion.join(',');
-            // --- FIN DEL CAMBIO ---
+            const modalContent = document.getElementById("reservationDetails");
 
-            console.log("📥 Clase(s) encontrada(s):", clase);
+    
 
-            // Actualiza atributos data para opciones del menú contextual
-            const reservar = document.getElementById("reservarOpcion");
-            if (reservar) {
-                reservar.dataset.hora = hora;
-                reservar.dataset.anfitrion = anfitrion;
-                reservar.dataset.clase = clase;
-            }
+            // Evento menú contextual para celdas disponibles (.available)
 
-            const bloquear = document.getElementById("bloquearOpcion");
-            if (bloquear) {
-                bloquear.dataset.hora = hora;
-                bloquear.dataset.anfitrion = anfitrion;
-            }
+            tabla?.addEventListener("contextmenu", (event) => {
 
-            this.mostrarMenuContextual("contextMenu", event);
-        });
+                const celda = event.target.closest(".available");
 
-        // Click para mostrar detalles en celdas ocupadas o bloqueadas
-        tabla?.addEventListener("click", (event) => {
-            const celdaReserva = event.target.closest(".occupied");
-            const celdaBloqueo = event.target.closest(".bloqueada");
-            if (celdaReserva) return this.mostrarDetalleReservacion(celdaReserva);
-            if (celdaBloqueo) return this.mostrarDetalleBloqueo(celdaBloqueo);
-        });
+                if (!celda) return;
 
-        // Menú contextual para celdas ocupadas (.occupied)
-        tabla?.addEventListener("contextmenu", (event) => {
-            const celda = event.target.closest(".occupied");
-            if (!celda) return;
-            event.preventDefault();
+                event.preventDefault();
 
-            const reservaId = celda.getAttribute("data-reserva-id");
-            const checkIn = celda.getAttribute("data-check-in"); // "1" o "0"
-            const checkOut = celda.getAttribute("data-check-out"); // "1" o "0"
+    
 
-            document.getElementById("editarOpcion")?.setAttribute("data-reserva-id", reservaId);
-            document.getElementById("eliminarOpcion")?.setAttribute("data-reserva-id", reservaId);
+                celdaSeleccionada = celda;
 
-            const checkinOpcion = document.getElementById("checkinOpcion");
-            if (checkinOpcion) {
-                checkinOpcion.setAttribute("data-reserva-id", reservaId);
-                // Ocultar si ya se hizo check-in
+    
+
+                const hora = celda.getAttribute("data-hora");
+
+                const anfitrion = celda.getAttribute("data-anfitrion");
+
+    
+
+                // --- INICIO DEL CAMBIO: Lógica simplificada para obtener especialidades ---
+
+                // Obtenemos la lista de especialidades (clases y/o subclases) directamente del anfitrión.
+
+                let especialidadesAnfitrion = [];
+
+                const anfitrionInfo = window.ReservasConfig.anfitriones?.find(a => a.id == anfitrion);
+
+                if (anfitrionInfo) {
+
+                    especialidadesAnfitrion = (anfitrionInfo.operativo?.clases_actividad || anfitrionInfo.clases_actividad || []);
+
+                }
+
+                const clase = especialidadesAnfitrion.join(',');
+
+                // --- FIN DEL CAMBIO ---
+
+    
+
+                console.log("📥 Clase(s) encontrada(s):", clase);
+
+    
+
+                // Actualiza atributos data para opciones del menú contextual
+
+                const reservar = document.getElementById("reservarOpcion");
+
+                if (reservar) {
+
+                    reservar.dataset.hora = hora;
+
+                    reservar.dataset.anfitrion = anfitrion;
+
+                    reservar.dataset.clase = clase;
+
+                }
+
+    
+
+                const bloquear = document.getElementById("bloquearOpcion");
+
+                if (bloquear) {
+
+                    bloquear.dataset.hora = hora;
+
+                    bloquear.dataset.anfitrion = anfitrion;
+
+                }
+
+    
+
+                this.mostrarMenuContextual("contextMenu", event);
+
+            });
+
+    
+
+            // Click para mostrar detalles en celdas ocupadas o bloqueadas
+
+            tabla?.addEventListener("click", (event) => {
+
+                const celdaReserva = event.target.closest(".occupied");
+
+                const celdaBloqueo = event.target.closest(".bloqueada");
+
+                if (celdaReserva) return this.mostrarDetalleReservacion(celdaReserva);
+
+                if (celdaBloqueo) return this.mostrarDetalleBloqueo(celdaBloqueo);
+
+            });
+
+    
+
+            // Menú contextual para celdas ocupadas (.occupied)
+
+            tabla?.addEventListener("contextmenu", (event) => {
+
+                const celda = event.target.closest(".occupied");
+
+                if (!celda) return;
+
+                event.preventDefault();
+
+    
+
+                const reservaId = celda.getAttribute("data-reserva-id");
+
+                const checkIn = celda.getAttribute("data-check-in"); // "1" o "0"
+
+                const checkOut = celda.getAttribute("data-check-out"); // "1" o "0"
+
+    
+
+                document.getElementById("editarOpcion")?.setAttribute("data-reserva-id", reservaId);
+
+                document.getElementById("eliminarOpcion")?.setAttribute("data-reserva-id", reservaId);
+
+    
+
+                const checkinOpcion = document.getElementById("checkinOpcion");
+
+                if (checkinOpcion) {
+
+                    checkinOpcion.setAttribute("data-reserva-id", reservaId);
+
+                    // Ocultar si ya se hizo check-in
+
+                    if (checkIn === '1') {
+
+                        checkinOpcion.style.display = 'none';
+
+                    }
+
+                    else {
+
+                        checkinOpcion.style.display = 'block';
+
+                    }
+
+                }
+
+    
+
+                const checkoutOpcion = document.getElementById("checkoutOpcion");
+
+                if (checkoutOpcion) {
+
+                    checkoutOpcion.setAttribute('data-reserva-id', reservaId);
+
+                    // Mostrar solo si se hizo check-in y no check-out
+
+                    if (checkIn === '1' && checkOut !== '1') {
+
+                        checkoutOpcion.style.display = 'block';
+
+                    }
+
+                    else {
+
+                        checkoutOpcion.style.display = 'none';
+
+                    }
+
+                }
+
+                this.mostrarMenuContextual("contextMenuReserved", event);
+
+            });
+
+    
+
+            // --- INICIO DRAG & DROP ---
+
+            // Evento para iniciar el arrastre de una reserva
+
+            tabla?.addEventListener('dragstart', (event) => {
+
+                const celda = event.target.closest('.occupied');
+
+                if (!celda) return;
+
+    
+
+                const checkIn = celda.getAttribute('data-check-in');
+
                 if (checkIn === '1') {
-                    checkinOpcion.style.display = 'none';
-                } else {
-                    checkinOpcion.style.display = 'block';
-                }
-            }
 
-            const checkoutOpcion = document.getElementById("checkoutOpcion");
-            if (checkoutOpcion) {
-                checkoutOpcion.setAttribute('data-reserva-id', reservaId);
-                // Mostrar solo si se hizo check-in y no check-out
-                if (checkIn === '1' && checkOut !== '1') {
-                    checkoutOpcion.style.display = 'block';
-                } else {
-                    checkoutOpcion.style.display = 'none';
+                    Alerts.error('No se puede mover una reservación con check-in.');
+
+                    event.preventDefault();
+
+                    return;
+
                 }
-            }
-            this.mostrarMenuContextual("contextMenuReserved", event);
-        });
-    },
+
+    
+
+                const reservaId = celda.getAttribute('data-reserva-id');
+
+                event.dataTransfer.setData('text/plain', reservaId);
+
+                event.dataTransfer.effectAllowed = 'move';
+
+            });
+
+    
+
+            // Evento para permitir soltar sobre una celda disponible
+
+            tabla?.addEventListener('dragover', (event) => {
+
+                const celda = event.target.closest('.available');
+
+                if (celda) {
+
+                    event.preventDefault();
+
+                    celda.classList.add('drag-over'); // Estilo visual opcional
+
+                }
+
+            });
+
+    
+
+            // Evento para quitar el estilo visual al salir de la zona de drop
+
+            tabla?.addEventListener('dragleave', (event) => {
+
+                const celda = event.target.closest('.available');
+
+                if (celda) {
+
+                    celda.classList.remove('drag-over');
+
+                }
+
+            });
+
+    
+
+            // Evento para manejar la acción de soltar
+
+            tabla?.addEventListener('drop', async (event) => {
+
+                const celdaDestino = event.target.closest('.available');
+
+                if (!celdaDestino) return;
+
+            
+
+                event.preventDefault();
+
+                celdaDestino.classList.remove('drag-over');
+
+            
+
+                const reservaId = event.dataTransfer.getData('text/plain');
+
+                const nuevoAnfitrionId = celdaDestino.getAttribute('data-anfitrion');
+
+                const nuevaHora = celdaDestino.getAttribute('data-hora');
+
+                const fecha = document.getElementById('filtro_fecha').value;
+
+            
+
+                const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+
+            
+
+                const data = {
+
+                    anfitrion_id: nuevoAnfitrionId,
+
+                    hora: nuevaHora,
+
+                    fecha: fecha,
+
+                    from_drag: true,
+
+                };
+
+            
+
+                try {
+
+                    const response = await fetch(`/reservations/${reservaId}`, {
+
+                        method: 'PUT',
+
+                        headers: {
+
+                            'Content-Type': 'application/json',
+
+                            'X-CSRF-TOKEN': csrfToken,
+
+                            'Accept': 'application/json',
+
+                        },
+
+                        body: JSON.stringify(data),
+
+                    });
+
+            
+
+                    const result = await response.json();
+
+            
+
+                                    if (response.ok) {
+
+            
+
+                                        Alerts.success('¡Reservación movida!', result.message);
+
+            
+
+                                        TableLoader.reload(); // Recargar la tabla
+
+            
+
+                                    } else {
+
+                        const errorMessage = result.error || 'Ocurrió un error desconocido.';
+
+                        Alerts.error('Error al mover', errorMessage);
+
+                    }
+
+                } catch (error) {
+
+                    console.error('Error en la petición de drop:', error);
+
+                    Alerts.error('Error de Conexión', 'No se pudo comunicar con el servidor.');
+
+                }
+
+            });
+
+            // --- FIN DRAG & DROP ---
+
+        },
 
     // Posiciona y muestra menú contextual sin que se desborde
     mostrarMenuContextual(id, event) {

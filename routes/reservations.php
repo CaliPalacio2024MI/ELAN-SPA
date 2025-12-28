@@ -14,6 +14,7 @@ Route::middleware(['auth', 'role:master,administrador,recepcionista,anfitrion'])
     Route::get('/reservations', [ReservationController::class, 'index'])->name('reservations.index');
     Route::get('/reservations/{id}', [ReservationController::class, 'show'])->name('reservations.show');
     Route::get('/reservations/data', [ReservationController::class, 'getReservations']);
+    Route::get('/anfitriones/{anfitrion}/horarios/{fecha}', [ReservationController::class, 'getHorariosAnfitrion'])->name('anfitriones.horarios');
 });
 
 Route::middleware(['auth', 'role:master,administrador,recepcionista'])->group(function () {

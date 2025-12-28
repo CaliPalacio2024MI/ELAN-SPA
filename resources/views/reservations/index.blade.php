@@ -209,8 +209,16 @@
                     {{-- Campos ocultos para datos esenciales --}}
                     <input type="hidden" id="cliente_existente_id" name="cliente_existente_id" value="">
                     <input type="hidden" id="reserva_id" name="reserva_id">
-                    <input type="hidden" id="fecha" name="fecha">
-                    <input type="hidden" id="hora" name="hora">
+                    <div class="mb-3">
+                        <label for="fecha_reserva" class="form-label">Fecha</label>
+                        <input type="date" id="fecha_reserva" name="fecha" class="form-control">
+                    </div>
+                    <div class="mb-3">
+                        <label for="hora" class="form-label">Hora</label>
+                        <select id="hora" name="hora" class="form-select">
+                            <option value="">Selecciona una hora</option>
+                        </select>
+                    </div>
                     <input type="hidden" id="duracion" name="duracion">
                     <input type="hidden" id="selected_anfitrion" name="anfitrion_id">
 
@@ -254,6 +262,14 @@
                                     {{ $experience->nombre }} - {{ $experience->duracion }} min - ${{ $experience->precio }}
                                 </option>
                             @endforeach
+                        </select>
+                    </div>
+
+                    {{-- Select anfitrión (solo para edición) --}}
+                    <div class="mb-3" id="anfitrionWrapper" style="display: none;">
+                        <label for="anfitrion_id" class="form-label">Anfitrión/Terapeuta</label>
+                        <select class="form-select" id="anfitrion_id_select" name="anfitrion_id">
+                            {{-- Opciones se llenarán dinámicamente --}}
                         </select>
                     </div>
 

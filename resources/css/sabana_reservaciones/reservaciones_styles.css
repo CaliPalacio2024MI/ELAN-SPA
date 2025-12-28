@@ -930,3 +930,10 @@ body, html {
         padding: 8px;
     }
 }
+
+/* Estilo para la celda sobre la que se arrastra una reservación */
+.drag-over {
+    background-color: #d4edda !important; /* Un verde claro para indicar 'disponible' */
+    border: 2px dashed #155724 !important; /* Un borde verde oscuro y discontinuo */
+    transition: background-color 0.2s ease, border 0.2s ease;
+}
