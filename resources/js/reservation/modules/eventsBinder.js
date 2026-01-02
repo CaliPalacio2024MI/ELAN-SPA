@@ -2,13 +2,136 @@
 
 import { TableLoader } from './tableLoader.js';
 import { Alerts } from '@/utils/alerts.js';
+import { ModalHandler } from './modalHandler.js';
+import { ReservationFormHandler } from './formHandler.js';
 
 let celdaSeleccionada = null;
+let draggingReserva = null;
+let isDropping = false;
+
+// Comprueba si un anfitrión está calificado para una experiencia
+function anfitrionCalificado(anfitrionId, experienciaId) {
+    try {
+        const experiencias = window.ReservasConfig?.experiencias || [];
+        const anfitriones = window.ReservasConfig?.anfitriones || [];
+
+        const exp = experiencias.find(e => String(e.id) === String(experienciaId));
+        const claseExp = (exp?.clase || '').toString();
+        const nombreExp = (exp?.nombre || '').toString();
+
+        const anfitrion = anfitriones.find(a => String(a.id) === String(anfitrionId));
+        if (!anfitrion) return false;
+
+        const clases = Array.isArray(anfitrion.operativo?.clases_actividad)
+            ? anfitrion.operativo.clases_actividad
+            : (Array.isArray(anfitrion.clases_actividad) ? anfitrion.clases_actividad : []);
+
+        const normalize = s => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+
+        const claseNorm = normalize(claseExp);
+        const nombreNorm = normalize(nombreExp);
+
+        for (const c of clases) {
+            const cNorm = normalize(c);
+            if (cNorm === claseNorm || cNorm === nombreNorm) return true;
+        }
+
+        return false;
+    } catch (e) {
+        return false;
+    }
+}
 
 export const EventsBinder = {
     // Inicializa eventos principales
     init() {
         this.asignarEventosCeldas();
+        this.asignarEventoReservarOpcion();
+    },
+
+    asignarEventoReservarOpcion() {
+        const reservarOpcion = document.getElementById("reservarOpcion");
+        reservarOpcion?.addEventListener("click", async (event) => {
+            event.preventDefault();
+            const menu = document.getElementById("contextMenu");
+            if (menu) menu.style.display = "none";
+    
+            const anfitrionId = reservarOpcion.dataset.anfitrion;
+            const hora = reservarOpcion.dataset.hora;
+            const fecha = document.getElementById("filtro_fecha").value;
+    
+            ReservationFormHandler.limpiarFormulario();
+    
+            // Rellenar y mostrar el formulario para una nueva reservación
+            const fechaInput = document.getElementById("fecha_reserva");
+            const horaInput = document.getElementById("hora");
+            const anfitrionInput = document.getElementById("selected_anfitrion");
+
+            if (fechaInput) {
+                fechaInput.value = fecha;
+                const fechaWrapper = fechaInput.closest('#fecha-wrapper');
+                if(fechaWrapper) fechaWrapper.style.display = 'block';
+                fechaInput.readOnly = true; 
+            }
+            if (horaInput) {
+                horaInput.innerHTML = `<option value="${hora}" selected>${hora}</option>`; // Añade como opción y la selecciona
+                const horaWrapper = horaInput.closest('#hora-wrapper');
+                if(horaWrapper) horaWrapper.style.display = 'block';
+                // Permitir que el usuario cambie la hora manualmente al crear desde la celda
+                horaInput.disabled = false;
+                horaInput.removeAttribute('disabled');
+            }
+            if (anfitrionInput) {
+                anfitrionInput.value = anfitrionId;
+            }
+            // Poblar horas disponibles para el anfitrión y fecha seleccionada
+            try {
+                const horaSelect = document.getElementById("hora");
+                if (anfitrionId && fecha && horaSelect) {
+                    const url = `/anfitriones/${anfitrionId}/horarios/${fecha}`;
+                    const resp = await fetch(url);
+                    if (resp.ok) {
+                        const horarios = await resp.json();
+                        horaSelect.innerHTML = '<option value="">Selecciona una hora</option>';
+                        if (horarios && horarios.length > 0) {
+                            horarios.forEach(h => {
+                                const option = document.createElement('option');
+                                option.value = h;
+                                option.textContent = h;
+                                horaSelect.appendChild(option);
+                            });
+                        }
+                        // Si la hora de la celda no está en la lista, añadirla como opción
+                        if (hora) {
+                            const exists = Array.from(horaSelect.options).some(o => o.value === hora);
+                            if (!exists) {
+                                const opt = document.createElement('option');
+                                opt.value = hora;
+                                opt.textContent = hora;
+                                opt.setAttribute('data-original', 'true');
+                                horaSelect.appendChild(opt);
+                            }
+                            horaSelect.value = hora;
+                        }
+                        horaSelect.disabled = false;
+                        horaSelect.removeAttribute('disabled');
+                    } else {
+                        // Fallback: dejar la hora única proveniente de la celda
+                        horaInput.innerHTML = `<option value="${hora}" selected>${hora}</option>`;
+                        horaInput.disabled = false;
+                        horaInput.removeAttribute('disabled');
+                    }
+                }
+            } catch (e) {
+                console.error('Error al obtener horarios del anfitrión:', e);
+            }
+    
+            // Filtra las experiencias para el anfitrión seleccionado
+            const form = document.getElementById('reservationForm');
+            ReservationFormHandler.filtrarExperienciasPorAnfitrion(anfitrionId, form);
+    
+            ModalHandler.showReservationModal();
+        });
     },
 
         // Asigna eventos para clicks y menú contextual en celdas
@@ -30,7 +153,6 @@ export const EventsBinder = {
                 const celda = event.target.closest(".available");
 
                 if (!celda) return;
-
                 event.preventDefault();
 
     
@@ -224,6 +346,16 @@ export const EventsBinder = {
     
 
                 const reservaId = celda.getAttribute('data-reserva-id');
+                console.log('dragstart -> reservaId:', reservaId, 'anfitrion origen:', celda.getAttribute('data-anfitrion'));
+
+                // Guardar información mínima de la reserva que se está arrastrando
+                try {
+                    const reservas = window.ReservasConfig?.reservaciones || [];
+                    const reserv = reservas.find(r => String(r.id) === String(reservaId));
+                    draggingReserva = reserv ? { id: reservaId, experiencia_id: reserv.experiencia_id || (reserv.experiencia && reserv.experiencia.id) } : { id: reservaId };
+                } catch (e) {
+                    draggingReserva = { id: reservaId };
+                }
 
                 event.dataTransfer.setData('text/plain', reservaId);
 
@@ -233,20 +365,29 @@ export const EventsBinder = {
 
     
 
-            // Evento para permitir soltar sobre una celda disponible
-
+            // Evento para permitir soltar sobre una celda disponible (valida calificación)
             tabla?.addEventListener('dragover', (event) => {
-
                 const celda = event.target.closest('.available');
+                if (!celda) return;
 
-                if (celda) {
+                const destinoAnfitrion = celda.getAttribute('data-anfitrion');
 
-                    event.preventDefault();
-
-                    celda.classList.add('drag-over'); // Estilo visual opcional
-
+                // Si hay una reserva en arrastre, validar si el anfitrión destino está calificado
+                if (draggingReserva && draggingReserva.experiencia_id) {
+                    const calificado = anfitrionCalificado(destinoAnfitrion, draggingReserva.experiencia_id);
+                    if (!calificado) {
+                        // No permitir drop y marcar visualmente
+                        celda.classList.add('drag-forbidden');
+                        celda.classList.remove('drag-over');
+                        return;
+                    }
+                    celda.classList.remove('drag-forbidden');
                 }
 
+                // Permitimos el drop
+                event.preventDefault();
+                celda.classList.add('drag-over'); // Estilo visual opcional
+                console.log('dragover -> celda disponible detectada:', destinoAnfitrion, celda.getAttribute('data-hora'));
             });
 
     
@@ -260,6 +401,7 @@ export const EventsBinder = {
                 if (celda) {
 
                     celda.classList.remove('drag-over');
+                    celda.classList.remove('drag-forbidden');
 
                 }
 
@@ -270,6 +412,8 @@ export const EventsBinder = {
             // Evento para manejar la acción de soltar
 
             tabla?.addEventListener('drop', async (event) => {
+
+                if (isDropping) return;
 
                 const celdaDestino = event.target.closest('.available');
 
@@ -282,6 +426,8 @@ export const EventsBinder = {
                 celdaDestino.classList.remove('drag-over');
 
             
+
+                isDropping = true;
 
                 const reservaId = event.dataTransfer.getData('text/plain');
 
@@ -363,7 +509,20 @@ export const EventsBinder = {
 
                     Alerts.error('Error de Conexión', 'No se pudo comunicar con el servidor.');
 
+                } finally {
+                    setTimeout(() => {
+                        isDropping = false;
+                    }, 1000);
                 }
+
+            // Limpiar estado cuando termina el arrastre
+            tabla?.addEventListener('dragend', (event) => {
+                draggingReserva = null;
+                document.querySelectorAll('.reserva-celda').forEach(c => {
+                    c.classList.remove('drag-over');
+                    c.classList.remove('drag-forbidden');
+                });
+            });
 
             });
 

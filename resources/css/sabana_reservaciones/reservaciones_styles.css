@@ -931,9 +931,14 @@ body, html {
     }
 }
 
-/* Estilo para la celda sobre la que se arrastra una reservación */
-.drag-over {
-    background-color: #d4edda !important; /* Un verde claro para indicar 'disponible' */
-    border: 2px dashed #155724 !important; /* Un borde verde oscuro y discontinuo */
-    transition: background-color 0.2s ease, border 0.2s ease;
+/* Estilos para Drag and Drop */
+.reserva-celda.drag-over {
+    background-color: #d4edda !important;
+    border: 2px dashed #155724;
+}
+
+.reserva-celda.drag-forbidden {
+    background-color: #f8d7da !important;
+    border: 2px dashed #721c24;
+    cursor: not-allowed;
 }

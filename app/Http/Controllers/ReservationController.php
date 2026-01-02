@@ -460,10 +460,40 @@ class ReservationController extends Controller
 
         // VALIDACIÓN: El anfitrión debe tener la especialidad (clase) requerida por la experiencia.
         $newAnfitrion = Anfitrion::with('operativo')->find($request->input('anfitrion_id'));
-        $requiredClass = $reservation->experiencia->clase;
-        $anfitrionClasses = $newAnfitrion->operativo->clases_actividad ?? [];
+        $experience = $reservation->experiencia;
+        
+        // Función para normalizar strings (minúsculas, sin tildes, sin espacios extra)
+        $normalize = function ($str) {
+            if (!$str) return '';
+            $str = mb_strtolower($str, 'UTF-8');
+            $str = str_replace(
+                ['á', 'é', 'í', 'ó', 'ú', 'ñ'],
+                ['a', 'e', 'i', 'o', 'u', 'n'],
+                $str
+            );
+            return trim($str);
+        };
 
-        if ($newAnfitrion && !in_array($requiredClass, $anfitrionClasses)) {
+        $requiredName = $normalize($experience->nombre);
+        $requiredClass = $normalize($experience->clase);
+        
+        $anfitrionClasses = $newAnfitrion->operativo->clases_actividad ?? [];
+        $normalizedAnfitrionClasses = array_map($normalize, $anfitrionClasses);
+
+        $isQualified = in_array($requiredClass, $normalizedAnfitrionClasses) || in_array($requiredName, $normalizedAnfitrionClasses);
+
+        // --- DEBUGGING ---
+        Log::debug('--- Calificación de Anfitrión D&D (Lógica flexible) ---');
+        Log::debug("Reservación ID: {$id}");
+        Log::debug("Anfitrión a verificar ID: {$newAnfitrion->id}");
+        Log::debug("Clase requerida (normalizada): '{$requiredClass}'");
+        Log::debug("Nombre requerido (normalizado): '{$requiredName}'");
+        Log::debug("Clases del anfitrión (normalizadas): " . implode(', ', $normalizedAnfitrionClasses));
+        Log::debug("Resultado de calificación: " . ($isQualified ? 'CALIFICADO' : 'NO CALIFICADO'));
+        // --- FIN DEBUGGING ---
+
+        if (!$isQualified) {
+            Log::warning("VALIDACIÓN FALLIDA: Anfitrión no posee la clase '{$requiredClass}' ni el nombre '{$requiredName}'.");
             return response()->json([
                 'error' => 'El anfitrión no está calificado para realizar esta experiencia.'
             ], 422);
@@ -521,7 +551,28 @@ class ReservationController extends Controller
 
         Log::info("Reservación ID $id movida a las {$validated['hora']} con anfitrión {$validated['anfitrion_id']}.");
 
-        return response()->json(['success' => true, 'message' => 'Reservación movida correctamente.']);
+        // Cargar relaciones para devolver datos completos
+        $reservation->load(['cliente', 'experiencia', 'anfitrion', 'cabina']);
+
+        $cliente = $reservation->cliente;
+        $nombreCliente = trim("{$cliente->nombre} {$cliente->apellido_paterno} {$cliente->apellido_materno}");
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Reservación movida correctamente.',
+            'reservation' => [
+                'id' => $reservation->id,
+                'cliente_nombre' => $nombreCliente,
+                'experiencia_nombre' => $reservation->experiencia->nombre ?? 'N/D',
+                'anfitrion_nombre' => $reservation->anfitrion->nombre_usuario ?? 'N/D',
+                'hora' => substr($reservation->hora, 0, 5),
+                'duracion' => $reservation->experiencia->duracion,
+                'anfitrion_id' => $reservation->anfitrion_id,
+                'check_in' => $reservation->check_in,
+                'check_out' => $reservation->check_out,
+                'clase_experiencia' => $reservation->experiencia->clase,
+            ]
+        ]);
     }
 
     // Cancelar (no eliminar) reservación
@@ -858,7 +909,12 @@ class ReservationController extends Controller
             $start = \Carbon\Carbon::parse($fecha . ' ' . $res->hora);
             $duration = $res->experiencia->duracion;
             $end = $start->copy()->addMinutes($duration + $breakTime);
-            $busyIntervals[] = ['start' => $start, 'end' => $end];
+            $busyIntervals[] = [
+                'start' => $start, 
+                'end' => $end,
+                'type' => 'reservation',
+                'id' => $res->id,
+            ];
         }
 
         foreach ($blockedSlots as $block) {
@@ -866,7 +922,12 @@ class ReservationController extends Controller
             $start = \Carbon\Carbon::parse($fecha . ' ' . $block->hora);
             $duration = $block->duracion;
             $end = $start->copy()->addMinutes($duration);
-            $busyIntervals[] = ['start' => $start, 'end' => $end];
+            $busyIntervals[] = [
+                'start' => $start, 
+                'end' => $end,
+                'type' => 'blocked_slot',
+                'id' => $block->id,
+            ];
         }
 
         return $busyIntervals;
@@ -885,6 +946,15 @@ class ReservationController extends Controller
 
         foreach ($busyIntervals as $busy) {
             if ($newSlotStart < $busy['end'] && $newSlotEnd > $busy['start']) {
+                // --- NEW LOGGING ---
+                Log::warning('--- CONFLICTO DE ANFITRIÓN DETECTADO ---');
+                Log::warning("Anfitrión ID: {$data['anfitrion_id']}");
+                Log::warning("Horario solicitado: {$newSlotStart->toDateTimeString()} - {$newSlotEnd->toDateTimeString()}");
+                Log::warning("Conflicto con intervalo: {$busy['start']->toDateTimeString()} - {$busy['end']->toDateTimeString()}");
+                if (isset($busy['type'])) {
+                    Log::warning("Tipo de conflicto: {$busy['type']} (ID: {$busy['id']})");
+                }
+                // --- FIN LOGGING ---
                 return true; // Conflict found
             }
         }
@@ -1034,6 +1104,36 @@ class ReservationController extends Controller
         }
     
         return response()->json($availableSlots);
+    }
+
+    public function getCabinasForExperience(Request $request, Experience $experience)
+    {
+        $spa = Spa::where('nombre', session('current_spa'))->firstOrFail();
+        
+        $cabinas = Cabina::where('spa_id', $spa->id)
+            ->where('activo', true)
+            ->whereJsonContains('clases_actividad', $experience->clase)
+            ->get();
+
+        return response()->json($cabinas);
+    }
+
+    public function getExperiencesForAnfitrion(Request $request, Anfitrion $anfitrion)
+    {
+        $spa = Spa::where('nombre', session('current_spa'))->firstOrFail();
+        
+        $clases = $anfitrion->operativo->clases_actividad ?? [];
+
+        if (empty($clases)) {
+            return response()->json([]);
+        }
+
+        $experiences = Experience::where('spa_id', $spa->id)
+            ->where('activo', true)
+            ->whereIn('clase', $clases)
+            ->get();
+
+        return response()->json($experiences);
     }
     
 }

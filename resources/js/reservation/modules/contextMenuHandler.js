@@ -103,7 +103,10 @@ export const ContextMenuHandler = {
         }
 
         // Llena campos básicos y muestra modal
-        document.getElementById("fecha").value = new Date().toISOString().split("T")[0];
+        // Rellenar la fecha del formulario principal (id: fecha_reserva)
+        const fechaInput = document.getElementById("fecha_reserva");
+        const fechaSeleccionada = document.getElementById("filtro_fecha").value;
+        if (fechaInput) fechaInput.value = fechaSeleccionada;
         document.getElementById("hora").value = hora;
         document.getElementById("selected_anfitrion").value = anfitrion;
 
@@ -115,15 +118,23 @@ export const ContextMenuHandler = {
         document.getElementById("contextMenu").style.display = "none";
     },
 
-    // Muestra modal para bloqueo de horario
+    // Muestra modal para bloqueo de horario (toma datos desde el dataset del botón del menú)
     abrirModalBloqueo() {
-        const hora = event.target.getAttribute("data-hora");
-        const anfitrion = event.target.getAttribute("data-anfitrion");
+        const bloquearBtn = document.getElementById("bloquearOpcion");
+        if (!bloquearBtn) return;
 
-        document.getElementById("bloqueo_hora").value = hora;
-        document.getElementById("bloqueo_anfitrion_id").value = anfitrion;
-        document.getElementById("motivo_bloqueo").value = "";
-        document.getElementById("duracion_bloqueo").value = 30;
+        const hora = bloquearBtn.dataset.hora || "";
+        const anfitrion = bloquearBtn.dataset.anfitrion || "";
+
+        const horaInput = document.getElementById("bloqueo_hora");
+        const anfitrionInput = document.getElementById("bloqueo_anfitrion_id");
+        if (horaInput) horaInput.value = hora;
+        if (anfitrionInput) anfitrionInput.value = anfitrion;
+
+        const motivo = document.getElementById("motivo_bloqueo");
+        if (motivo) motivo.value = "";
+        const duracion = document.getElementById("duracion_bloqueo");
+        if (duracion) duracion.value = 30;
 
         new bootstrap.Modal(document.getElementById("bloqueoModal")).show();
     },

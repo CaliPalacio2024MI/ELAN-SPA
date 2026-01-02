@@ -11,21 +11,14 @@ export const ReservationFormHandler = {
         return String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
     },
     // Comprueba si una cabina (con sus 'clases_actividad' que contienen nombres de experiencias)
-    // es compatible con una clase requerida (nombre general de la experiencia)
-    cabinaSoportaClase(cabina, claseRequerida) {
+    // es compatible con un nombre de experiencia requerido.
+    cabinaSoportaClase(cabina, nombreExperienciaRequerido) {
         if (!cabina || !Array.isArray(cabina.clases_actividad)) return false;
-        const experiencias = window.ReservasConfig?.experiencias || [];
-        const claseNorm = ReservationFormHandler.normalizeString(claseRequerida);
+        const nombreNorm = ReservationFormHandler.normalizeString(nombreExperienciaRequerido);
 
-        return cabina.clases_actividad.some(tipoNombre => {
-            const tipoNorm = ReservationFormHandler.normalizeString(tipoNombre);
-            // Buscar experiencia por nombre (tipo) y comparar su clase
-            const exp = experiencias.find(e => ReservationFormHandler.normalizeString(e.nombre) === tipoNorm);
-            if (exp && exp.clase) {
-                return ReservationFormHandler.normalizeString(exp.clase) === claseNorm;
-            }
-            // Si no existe la experiencia por nombre, también comparar directamente con la clase
-            return tipoNorm === claseNorm;
+        return cabina.clases_actividad.some(actividadCabina => {
+            const actividadNorm = ReservationFormHandler.normalizeString(actividadCabina);
+            return actividadNorm === nombreNorm;
         });
     },
     // Inicializa eventos y configuraciones del formulario
@@ -419,6 +412,16 @@ export const ReservationFormHandler = {
         datosDiv.style.display = "block";
         document.getElementById("observaciones").value = data.observaciones || "";
 
+        // Mostrar campos de fecha y hora para la edición
+        const fechaWrapper = document.getElementById("fecha-wrapper");
+        if (fechaWrapper) {
+            fechaWrapper.classList.remove("d-none");
+        }
+        const horaWrapper = document.getElementById("hora-wrapper");
+        if (horaWrapper) {
+            horaWrapper.classList.remove("d-none");
+        }
+
         const anfitrionWrapper = document.getElementById("anfitrionWrapper");
         const anfitrionSelect = document.getElementById("anfitrion_id_select");
         anfitrionWrapper.style.display = "block";
@@ -446,6 +449,11 @@ export const ReservationFormHandler = {
             });
         }
         horaSelect.value = data.hora;
+        // Asegurar que el select de hora esté habilitado para poder cambiarla manualmente
+        if (horaSelect) {
+            horaSelect.disabled = false;
+            horaSelect.removeAttribute('disabled');
+        }
         
         const modalEl = document.getElementById("reservationModal");
         const modal = new bootstrap.Modal(modalEl, { keyboard: false });
@@ -462,6 +470,16 @@ export const ReservationFormHandler = {
     limpiarFormulario() {
         const form = document.getElementById("reservationForm");
         if (form) form.reset();
+
+        // Ocultar campos de fecha y hora para nuevas reservaciones
+        const fechaWrapper = document.getElementById("fecha-wrapper");
+        if (fechaWrapper) {
+            fechaWrapper.classList.add("d-none");
+        }
+        const horaWrapper = document.getElementById("hora-wrapper");
+        if (horaWrapper) {
+            horaWrapper.classList.add("d-none");
+        }
 
         window.originalHoraReserva = null;
 
@@ -579,10 +597,10 @@ export const ReservationFormHandler = {
             const experiencia = experiencias.find(e => e.id == experienciaId);
             if (!experiencia) return;
 
-            const claseRequerida = ReservationFormHandler.normalizeString(experiencia.clase || "");
+            const nombreRequerido = ReservationFormHandler.normalizeString(experiencia.nombre || "");
 
             // Filtra cabinas compatibles
-            const cabinasCompatibles = cabinas.filter(c => ReservationFormHandler.cabinaSoportaClase(c, claseRequerida));
+            const cabinasCompatibles = cabinas.filter(c => ReservationFormHandler.cabinaSoportaClase(c, nombreRequerido));
 
             // Guarda la cabina seleccionada antes de limpiar
             const cabinaSeleccionadaAnteriormente = cabinaSelect.value;
@@ -666,7 +684,7 @@ export const ReservationFormHandler = {
 
         // Filtrar y agregar opciones
         window.ReservasConfig.experiencias.forEach(exp => {
-            if (clasesPermitidas.length === 0 || clasesPermitidas.includes(ReservationFormHandler.normalizeString(exp.clase))) {
+            if (clasesPermitidas.length === 0 || clasesPermitidas.includes(ReservationFormHandler.normalizeString(exp.nombre))) {
                 const option = document.createElement('option');
                 option.value = exp.id;
                 option.textContent = exp.nombre;
@@ -953,6 +971,9 @@ export const ReservationFormHandler = {
 
                     if (horaActual) {
                         horaSelect.value = horaActual;
+                        // Habilitar el select de hora si venimos de una edición y queremos permitir cambios manuales
+                        horaSelect.disabled = false;
+                        horaSelect.removeAttribute('disabled');
                     }
 
                 } catch (error) {
