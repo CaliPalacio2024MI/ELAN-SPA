@@ -14,6 +14,11 @@ Route::middleware(['auth', 'role:master,administrador,recepcionista,anfitrion'])
     Route::get('/reservations', [ReservationController::class, 'index'])->name('reservations.index');
     Route::get('/reservations/{id}', [ReservationController::class, 'show'])->name('reservations.show');
     Route::get('/reservations/data', [ReservationController::class, 'getReservations']);
+    Route::get('/anfitriones/{anfitrion}/horarios/{fecha}', [ReservationController::class, 'getHorariosAnfitrion'])->name('anfitriones.horarios');
+    
+    // Rutas para filtrado dinámico en la edición de reservaciones
+    Route::get('/api/experiences/{experience}/cabinas', [ReservationController::class, 'getCabinasForExperience'])->name('api.experiences.cabinas');
+    Route::get('/api/anfitriones/{anfitrion}/experiences', [ReservationController::class, 'getExperiencesForAnfitrion'])->name('api.anfitriones.experiences');
 });
 
 Route::middleware(['auth', 'role:master,administrador,recepcionista'])->group(function () {

@@ -209,8 +209,16 @@
                     {{-- Campos ocultos para datos esenciales --}}
                     <input type="hidden" id="cliente_existente_id" name="cliente_existente_id" value="">
                     <input type="hidden" id="reserva_id" name="reserva_id">
-                    <input type="hidden" id="fecha" name="fecha">
-                    <input type="hidden" id="hora" name="hora">
+                    <div class="mb-3 d-none" id="fecha-wrapper">
+                        <label for="fecha_reserva" class="form-label">Fecha</label>
+                        <input type="date" id="fecha_reserva" name="fecha" class="form-control">
+                    </div>
+                    <div class="mb-3 d-none" id="hora-wrapper">
+                        <label for="hora" class="form-label">Hora</label>
+                        <select id="hora" name="hora" class="form-select">
+                            <option value="">Selecciona una hora</option>
+                        </select>
+                    </div>
                     <input type="hidden" id="duracion" name="duracion">
                     <input type="hidden" id="selected_anfitrion" name="anfitrion_id">
 
@@ -254,6 +262,14 @@
                                     {{ $experience->nombre }} - {{ $experience->duracion }} min - ${{ $experience->precio }}
                                 </option>
                             @endforeach
+                        </select>
+                    </div>
+
+                    {{-- Select anfitrión (solo para edición) --}}
+                    <div class="mb-3" id="anfitrionWrapper" style="display: none;">
+                        <label for="anfitrion_id" class="form-label">Anfitrión/Terapeuta</label>
+                        <select class="form-select" id="anfitrion_id_select" name="anfitrion_id">
+                            {{-- Opciones se llenarán dinámicamente --}}
                         </select>
                     </div>
 
@@ -355,9 +371,10 @@
 <script>
 document.addEventListener('DOMContentLoaded', function () {
     const selectExperiencia = document.getElementById('experiencia_id');
-    const selectAnfitrion = document.getElementById('anfitrion_id');
+    const selectAnfitrion = document.getElementById('anfitrion_id_select');
+    const selectCabina = document.getElementById('cabina_id');
 
-    if (!selectExperiencia || !selectAnfitrion) return;
+    if (!selectExperiencia || !selectAnfitrion || !selectCabina) return;
 
     const todosLosAnfitriones = window.ReservasConfig.anfitriones;
 
@@ -393,8 +410,65 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    // Detectar cambio en experiencia para filtrar anfitriones
-    selectExperiencia.addEventListener('change', filtrarAnfitriones);
+    async function filtrarCabinas() {
+        const experienciaId = parseInt(selectExperiencia.value);
+        if (!experienciaId) {
+            selectCabina.innerHTML = '<option value="">Selecciona una cabina</option>';
+            return;
+        }
+
+        try {
+            const response = await fetch(`/api/experiences/${experienciaId}/cabinas`);
+            if (!response.ok) throw new Error('Error al cargar las cabinas');
+            const cabinas = await response.json();
+
+            selectCabina.innerHTML = '<option value="">Selecciona una cabina</option>';
+            cabinas.forEach(cabina => {
+                const option = document.createElement('option');
+                option.value = cabina.id;
+                option.textContent = cabina.nombre;
+                selectCabina.appendChild(option);
+            });
+        } catch (error) {
+            console.error(error);
+            selectCabina.innerHTML = '<option value="">Error al cargar cabinas</option>';
+        }
+    }
+
+    async function filtrarExperiencias() {
+        const anfitrionId = parseInt(selectAnfitrion.value);
+        if (!anfitrionId) {
+            selectExperiencia.innerHTML = '<option value="">Selecciona una experiencia</option>';
+            return;
+        }
+
+        try {
+            const response = await fetch(`/api/anfitriones/${anfitrionId}/experiences`);
+            if (!response.ok) throw new Error('Error al cargar las experiencias');
+            const experiences = await response.json();
+
+            selectExperiencia.innerHTML = '<option value="">Selecciona una experiencia</option>';
+            experiences.forEach(experience => {
+                const option = document.createElement('option');
+                option.value = experience.id;
+                option.textContent = `${experience.nombre} - ${experience.duracion} min - $${experience.precio}`;
+                option.dataset.duracion = experience.duracion;
+                selectExperiencia.appendChild(option);
+            });
+        } catch (error) {
+            console.error(error);
+            selectExperiencia.innerHTML = '<option value="">Error al cargar experiencias</option>';
+        }
+    }
+
+    // Detectar cambio en experiencia para filtrar anfitriones y cabinas
+    selectExperiencia.addEventListener('change', function() {
+        filtrarAnfitriones();
+        filtrarCabinas();
+    });
+
+    // Detectar cambio en anfitrion para filtrar experiencias
+    selectAnfitrion.addEventListener('change', filtrarExperiencias);
 });
 </script>
 
