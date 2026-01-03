@@ -57,7 +57,7 @@ class SalonController extends Controller
         $grupoReservaIdsSalon = $reservacionesSalon->pluck('grupo_reserva_id')->filter()->unique();
 
          // Filtrar las ventas (Sale) usando ambos IDs: individuales y de grupo
-         // NO filtramos por fecha ni spa_id aquí, para encontrar el pago sin importar cuándo o dónde se hizo
+         // filtramos por fecha y spa_id aquí, para encontrar el pago sin importar cuándo o dónde se hizo
         $ventasSalon = Sale::query()
              ->where('spa_id', $spaId)
              ->whereBetween('created_at', [$fechaInicio, $fechaFin])

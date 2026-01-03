@@ -18,6 +18,83 @@
   @php
     $soloLectura = $soloLectura ?? false;
     $datos = $datosGuardados ?? [];
+
+    // Autocompletar datos si es un formulario nuevo y existe la reservación
+    if (empty($datos) && isset($reservation)) {
+        $cliente = $reservation->cliente;
+        
+        // Generar No. Expediente consecutivo global (independiente del cliente)
+        $maxIdEncontrado = 0;
+        $posiblesTablas = ['evaluations', 'evaluaciones', 'expedientes', 'medical_evaluations', 'medical_forms', 'evaluation_forms', 'reservation_evaluations'];
+        
+        // Intentar detectar tabla desde el modelo si existe
+        if (class_exists('App\Models\Evaluation')) {
+            array_unshift($posiblesTablas, (new \App\Models\Evaluation)->getTable());
+        }
+
+        // Intentar detectar tabla desde relaciones de la reservación
+        if (isset($reservation)) {
+            $relaciones = ['evaluation', 'evaluacion', 'medicalEvaluation', 'medical_evaluation'];
+            foreach ($relaciones as $rel) {
+                if (method_exists($reservation, $rel)) {
+                    try {
+                        $related = $reservation->$rel()->getRelated();
+                        array_unshift($posiblesTablas, $related->getTable());
+                    } catch (\Exception $e) {}
+                }
+            }
+        }
+
+        foreach (array_unique($posiblesTablas) as $tabla) {
+            try {
+                if (!\Illuminate\Support\Facades\Schema::hasTable($tabla)) {
+                    continue;
+                }
+
+                // Intentar obtener el consecutivo desde num_expediente (si existe columna) o id
+                $currentMax = 0;
+                $maxNumExp = 0;
+
+                if (\Illuminate\Support\Facades\Schema::hasColumn($tabla, 'num_expediente')) {
+                    $val = \Illuminate\Support\Facades\DB::table($tabla)->selectRaw('MAX(CAST(num_expediente AS UNSIGNED)) as m')->value('m');
+                    $maxNumExp = $val ? intval($val) : 0;
+                }
+                
+                // Obtener max ID como respaldo o referencia principal si es mayor
+                $maxId = \Illuminate\Support\Facades\DB::table($tabla)->max('id');
+                
+                // Tomar el valor más alto entre el consecutivo guardado y el ID físico
+                $currentMax = max($maxNumExp, $maxId);
+
+                if (!is_null($currentMax)) {
+                    if ($currentMax > $maxIdEncontrado) {
+                        $maxIdEncontrado = $currentMax;
+                    }
+                }
+            } catch (\Exception $e) {
+                continue;
+            }
+        }
+        $consecutivo = $maxIdEncontrado + 1;
+        $datos['num_expediente'] = str_pad($consecutivo, 6, '0', STR_PAD_LEFT);
+        $datos['lugar_fecha'] = date('d/m/Y');
+
+        if ($cliente) {
+            $datos['nombre_paciente'] = trim(($cliente->nombre ?? '') . ' ' . ($cliente->apellido_paterno ?? '') . ' ' . ($cliente->apellido_materno ?? ''));
+            $datos['correo'] = $cliente->email ?? $cliente->correo ?? ''; 
+            $datos['telefono'] = $cliente->telefono ?? '';
+            $datos['fecha_nacimiento'] = $cliente->fecha_nacimiento ?? '';
+            
+            if (!empty($cliente->fecha_nacimiento)) {
+                try {
+                    $datos['edad'] = \Carbon\Carbon::parse($cliente->fecha_nacimiento)->age;
+                } catch (\Exception $e) {}
+            }
+        }
+
+        $datos['terapeuta'] = $reservation->anfitrion->nombre_usuario ?? '';
+        $datos['tratamiento'] = $reservation->experiencia->nombre ?? '';
+    }
   @endphp
 
 <form method="POST"  action="{{ route('evaluation.store', ['reservation' => $reservation->id]) }}">

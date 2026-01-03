@@ -21,13 +21,13 @@ use Illuminate\Support\Facades\Validator;
 class BoutiqueController extends Controller
 {
     /**
-     * Verifica si el usuario autenticado es un "master".
+     * Verifica si el usuario autenticado es un "master y adminitrador".
      *
      * @return bool
      */
     private function isMasterUser(): bool
     {
-        // Lógica de usuario "master" basada en el rol del usuario, según lo especificado.
+        // Lógica de usuario "master y administrador" basada en el rol del usuario, según lo especificado.
         return Auth::check() && in_array(Auth::user()->rol, ['master', 'administrador']);
     }
 
