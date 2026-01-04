@@ -20,7 +20,7 @@
 
 <h1 class="mb-4">Check-out de Reservación</h1>
 
-<form action="{{ $sale ? route('sales.update', $sale->id) : route('sales.store') }}" method="POST" id="checkoutForm">
+<form action="{{ $sale ? route('sales.update', $sale->id) : route('sales.store') }}" method="POST" id="checkoutForm" enctype="multipart/form-data">
     @csrf
     @if ($sale)
         @method('PUT')
@@ -185,6 +185,24 @@
             name="referencia_pago"
             value="{{ old('referencia_pago', $sale->referencia_pago ?? '') }}"
             placeholder="Número de habitación, voucher, etc."
+        />
+    </section>
+
+    <section>
+        <label style="display:block; margin-bottom: 0.5rem;">Adjuntar evidencia (PDF o Imagen)</label>
+        <div style="display: flex; align-items: center; gap: 10px;">
+            <label for="evidencia_pago" class="btn-cobro" style="cursor: pointer; margin: 0; width: auto; display: inline-block; text-align: center;">
+                <i class="fas fa-paperclip"></i> Adjuntar archivo
+            </label>
+            <span id="nombre_archivo" style="font-size: 0.9rem; color: #555;"></span>
+        </div>
+        <input
+            type="file"
+            id="evidencia_pago"
+            name="evidencia_pago"
+            accept=".pdf, .png, .jpg, .jpeg"
+            style="display: none;"
+            onchange="document.getElementById('nombre_archivo').textContent = this.files[0] ? this.files[0].name : ''"
         />
     </section>
 
