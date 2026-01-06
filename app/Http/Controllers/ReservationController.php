@@ -1112,7 +1112,7 @@ class ReservationController extends Controller
         
         $cabinas = Cabina::where('spa_id', $spa->id)
             ->where('activo', true)
-            ->whereJsonContains('clases_actividad', $experience->clase)
+            ->whereJsonContains('clases_actividad', $experience->nombre)
             ->get();
 
         return response()->json($cabinas);
