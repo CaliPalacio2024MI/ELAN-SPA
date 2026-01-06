@@ -96,7 +96,7 @@
                         <th>Minutos</th>
                         <th>Neto</th>
                         <th>IVA (16%)</th>
-                        <th>Servicio (15%)</th>
+                        <th>Servicio</th>
                         <th>Total</th>
                     </tr>
                 </thead>
@@ -110,8 +110,9 @@
                     @foreach ($reservacionesGrupo as $res)
                         @php
                             $precio = $res->experiencia->precio;
+                            $porcentajeServicio = $res->anfitrion->porcentaje_servicio ?? 15;
                             $ivaActual = $precio * 0.16;
-                            $servicioActual = $precio * 0.15;
+                            $servicioActual = $precio * ($porcentajeServicio / 100);
                             $totalActual = $precio + $ivaActual + $servicioActual;
 
                             $subtotal += $precio;
@@ -125,7 +126,7 @@
                             <td>{{ $res->experiencia->duracion }}</td>
                             <td>${{ number_format($precio, 2) }}</td>
                             <td>${{ number_format($ivaActual, 2) }}</td>
-                            <td>${{ number_format($servicioActual, 2) }}</td>
+                            <td>${{ number_format($servicioActual, 2) }} <small>({{ $porcentajeServicio }}%)</small></td>
                             <td><strong>${{ number_format($totalActual, 2) }}</strong></td>
                         </tr>
                     @endforeach

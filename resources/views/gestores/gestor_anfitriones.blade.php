@@ -78,6 +78,7 @@
                     <th>Apellido paterno</th>
                     <th>Rol</th>
                     <th>Departamento</th>
+                    <th>% Servicio</th>
                     <th>Especialidades</th>
                     <th>Accesos</th>
                     <th>Activo</th>
@@ -92,6 +93,7 @@
                         <td>{{ $anfitrion->apellido_paterno }}</td>
                         <td>{{ ucfirst($anfitrion->rol) }}</td>
                         <td>{{ ucfirst($anfitrion->operativo?->departamento ?? '—') }}</td>
+                        <td>{{ $anfitrion->porcentaje_servicio ? $anfitrion->porcentaje_servicio . '%' : '15%' }}</td>
                         <td>
                             @if (!empty($anfitrion->operativo?->clases_actividad))
                                 {{ implode(', ', $anfitrion->operativo->clases_actividad) }}
@@ -131,6 +133,7 @@
                                 data-apellido-materno="{{ $anfitrion->apellido_materno}}"
                                 data-rol="{{ $anfitrion->rol }}"
                                 data-departamento="{{($anfitrion->operativo?->departamento ?? '—') }}"
+                                data-porcentaje-servicio="{{ $anfitrion->porcentaje_servicio ?? '' }}"
                                 data-clases='@json($anfitrion->operativo?->clases_actividad ?? [])'
                                 data-accesos='@json($anfitrion->accesos)'
                                 data-activo="{{ $anfitrion->activo }}">
@@ -222,6 +225,14 @@
                                 @endforelse
                             </select>
                             @error('departamento', 'create')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="porcentaje_servicio" class="form-label">Porcentaje por cargo del servicio</label>
+                            <input type="number" step="0.01" min="0" max="100" class="form-control {{ $errors->create->has('porcentaje_servicio') ? 'is-invalid' : '' }}" id="porcentaje_servicio" name="porcentaje_servicio" value="{{ $fromEdit ? '' : old('porcentaje_servicio') }}">
+                            @error('porcentaje_servicio', 'create')
                                 <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
                         </div>
@@ -371,6 +382,14 @@
                         </select>
                         @if ($errors->edit->has('departamento'))
                             <div class="invalid-feedback">{{ $errors->edit->first('departamento') }}</div>
+                        @endif
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="edit_porcentaje_servicio" class="form-label">Porcentaje por cargo del servicio</label>
+                        <input type="number" step="0.01" min="0" max="100" class="form-control {{ $errors->edit->has('porcentaje_servicio') ? 'is-invalid' : '' }}" id="edit_porcentaje_servicio" name="porcentaje_servicio">
+                        @if ($errors->edit->has('porcentaje_servicio'))
+                            <div class="invalid-feedback">{{ $errors->edit->first('porcentaje_servicio') }}</div>
                         @endif
                     </div>
 
@@ -549,6 +568,11 @@
 
                 const editForm = document.getElementById('editAnfitrionForm');
                 if (editForm) editForm.action = '/anfitriones/' + id;
+
+                // Cargar porcentaje servicio
+                const porcentaje = button.getAttribute('data-porcentaje-servicio');
+                const inputPorcentaje = document.getElementById('edit_porcentaje_servicio');
+                if (inputPorcentaje) inputPorcentaje.value = porcentaje || '';
 
                 // Limpiar selección previa
                 document.querySelectorAll('.edit-subtype-checkbox').forEach(ch => ch.checked = false);
