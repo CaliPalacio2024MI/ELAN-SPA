@@ -46,70 +46,31 @@ export const ContextMenuHandler = {
     abrirFormularioReservacion(event) {
         event.preventDefault();
         const target = event.target;
-
+ 
         const hora = target.dataset.hora;
-        const anfitrion = target.dataset.anfitrion;
-        const claseRaw = target.dataset.clase || "";
-        const clasesAnfitrion = claseRaw
-            .split(",")
-            .map(c => c.trim().toLowerCase())
-            .filter(c => c.length > 0); // Evita entradas vacías
-
-        console.log("🟡 Anfitrión ID:", anfitrion);
-        console.log("🟡 Clases del anfitrión:", clasesAnfitrion);
-
+        const anfitrionId = target.dataset.anfitrion;
+ 
         ReservationFormHandler.limpiarFormulario();
-
+ 
+        // Centralizamos el filtrado de experiencias en formHandler
+        const formPrincipal = document.getElementById('reservationForm');
+        ReservationFormHandler.filtrarExperienciasPorAnfitrion(anfitrionId, formPrincipal, false);
+ 
         const select = document.getElementById("experiencia_id");
-        const todas = window.ReservasConfig.experiencias || [];
-
-        console.log("🟢 Todas las experiencias:", todas);
-
-        select.innerHTML = '<option value="">Selecciona experiencia</option>';
-
-        let totalFiltradas = 0;
-
-        // Filtra experiencias según clases del anfitrión
-        todas.forEach(exp => {
-            // --- INICIO DEL CAMBIO: Lógica de filtrado dual ---
-            const claseExp = (exp.clase || "").toLowerCase().trim();
-            const nombreExp = (exp.nombre || "").toLowerCase().trim();
-
-            // Condición 1: La experiencia (subclase) está explícitamente en la lista del anfitrión.
-            // Esto funciona para anfitriones con subclases asignadas (ej: 'masaje de codos').
-            const esSubclaseDirecta = clasesAnfitrion.includes(nombreExp);
-
-            // Condición 2: La clase principal de la experiencia está en la lista del anfitrión.
-            // Esto mantiene la compatibilidad con anfitriones que tienen la clase principal (ej: 'experiencias').
-            const perteneceAClasePrincipal = clasesAnfitrion.includes(claseExp);
-
-            if (esSubclaseDirecta || perteneceAClasePrincipal) {
-                // --- FIN DEL CAMBIO ---
-                const opt = document.createElement("option");
-                opt.value = exp.id;
-                opt.textContent = `${exp.nombre} - ${exp.duracion} min - $${exp.precio}`;
-                opt.dataset.duracion = exp.duracion;
-                select.appendChild(opt);
-                totalFiltradas++;
-            }
-        });
-
-        console.log(`✅ Total experiencias filtradas: ${totalFiltradas}`);
-
+ 
         // Auto selecciona si solo hay una opción válida
         if (select.options.length === 2) {
             select.selectedIndex = 1;
             select.dispatchEvent(new Event("change"));
         }
-
+ 
         // Llena campos básicos y muestra modal
-        // Rellenar la fecha del formulario principal (id: fecha_reserva)
-        const fechaInput = document.getElementById("fecha_reserva");
-        const fechaSeleccionada = document.getElementById("filtro_fecha").value;
-        if (fechaInput) fechaInput.value = fechaSeleccionada;
+        // Usar la fecha del filtro principal de la página, no la fecha actual.
+        const fechaFiltro = document.getElementById("filtro_fecha")?.value;
+        document.getElementById("fecha_reserva").value = fechaFiltro || new Date().toISOString().split("T")[0];
         document.getElementById("hora").value = hora;
-        document.getElementById("selected_anfitrion").value = anfitrion;
-
+        document.getElementById("selected_anfitrion").value = anfitrionId;
+ 
         document.getElementById("modalTitle").textContent = "Nueva Reservación";
         document.getElementById("saveButton").textContent = "Guardar Reservación";
         document.getElementById("reserva_id").value = "";
@@ -118,23 +79,15 @@ export const ContextMenuHandler = {
         document.getElementById("contextMenu").style.display = "none";
     },
 
-    // Muestra modal para bloqueo de horario (toma datos desde el dataset del botón del menú)
+    // Muestra modal para bloqueo de horario
     abrirModalBloqueo() {
-        const bloquearBtn = document.getElementById("bloquearOpcion");
-        if (!bloquearBtn) return;
+        const hora = event.target.getAttribute("data-hora");
+        const anfitrion = event.target.getAttribute("data-anfitrion");
 
-        const hora = bloquearBtn.dataset.hora || "";
-        const anfitrion = bloquearBtn.dataset.anfitrion || "";
-
-        const horaInput = document.getElementById("bloqueo_hora");
-        const anfitrionInput = document.getElementById("bloqueo_anfitrion_id");
-        if (horaInput) horaInput.value = hora;
-        if (anfitrionInput) anfitrionInput.value = anfitrion;
-
-        const motivo = document.getElementById("motivo_bloqueo");
-        if (motivo) motivo.value = "";
-        const duracion = document.getElementById("duracion_bloqueo");
-        if (duracion) duracion.value = 30;
+        document.getElementById("bloqueo_hora").value = hora;
+        document.getElementById("bloqueo_anfitrion_id").value = anfitrion;
+        document.getElementById("motivo_bloqueo").value = "";
+        document.getElementById("duracion_bloqueo").value = 30;
 
         new bootstrap.Modal(document.getElementById("bloqueoModal")).show();
     },

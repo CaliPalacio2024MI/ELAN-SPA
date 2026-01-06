@@ -32,6 +32,14 @@ export const ReservationFormHandler = {
         this.setupGrupoReservas();
         this.setupFiltradoPorExperienciaYFecha();
         this.setupActualizarHoras();
+
+        // Filtra experiencias en el formulario principal (edición) al cambiar de anfitrión
+        const anfitrionSelectEdit = document.getElementById("anfitrion_id_select");
+        anfitrionSelectEdit?.addEventListener('change', (e) => {
+            const form = document.getElementById('reservationForm');
+            // No preservar el valor de la experiencia al cambiar de anfitrión manualmente
+            this.filtrarExperienciasPorAnfitrion(e.target.value, form, false);
+        });
     },
 
     // Maneja el envío del formulario (crear o editar reservación)
@@ -306,6 +314,12 @@ export const ReservationFormHandler = {
                 container.appendChild(wrapper);
                 ReservationFormHandler.populateSelects(wrapper);
 
+                // Listener para filtrar experiencias cuando cambia el anfitrión en el form de acompañante
+                wrapper.querySelector(`[name*='anfitrion_id']`)?.addEventListener('change', (e) => {
+                    // No preservar el valor de la experiencia al cambiar de anfitrión manualmente
+                    ReservationFormHandler.filtrarExperienciasPorAnfitrion(e.target.value, wrapper, false);
+                });
+
                 // Agrega listeners para actualizar cabinas, anfitriones y horas disponibles dinámicamente
                 ['experiencia_id', 'fecha'].forEach(campo => {
                     wrapper.querySelector(`[name*='${campo}']`)?.addEventListener('change', () => {
@@ -568,8 +582,8 @@ export const ReservationFormHandler = {
                 opt.textContent = a.nombre_usuario;
                 anfitrionSelect.appendChild(opt);
             });
-            const anfitrionId = anfitrionSelect.value;
-            this.filtrarExperienciasPorAnfitrion(anfitrionId, formulario);
+            // Filtrar experiencias según el anfitrión seleccionado
+            this.filtrarExperienciasPorAnfitrion(anfitrionSelect.value, wrapper);
         }
     },
 
@@ -669,28 +683,37 @@ export const ReservationFormHandler = {
     },
 
     // Filtra experiencias permitidas por anfitrión
-    filtrarExperienciasPorAnfitrion(anfitrionId, contenedor) {
-        const anfitrion = window.ReservasConfig.anfitriones.find(a => a.id == anfitrionId);
-        const selectExperiencia = contenedor?.querySelector('[name="experiencia_id"]');
+    filtrarExperienciasPorAnfitrion(anfitrionId, contenedor, preserveValue = true) {
+        const selectExperiencia = contenedor?.querySelector('[name*="experiencia_id"]');
+        if (!selectExperiencia) return;
 
-        if (!anfitrion || !selectExperiencia) return;
-
-        const clasesPermitidas = Array.isArray(anfitrion.operativo?.clases_actividad)
-            ? anfitrion.operativo.clases_actividad.map(c => ReservationFormHandler.normalizeString(c))
-            : [];
-
-        // Limpiar select
+        const valorAnterior = preserveValue ? selectExperiencia.value : null;
         selectExperiencia.innerHTML = '<option value="">Selecciona una experiencia</option>';
+
+        const anfitrion = window.ReservasConfig.anfitriones.find(a => a.id == anfitrionId);
+        if (!anfitrion) return;
+
+        const clasesAnfitrion = (anfitrion.operativo?.clases_actividad || []).map(c =>
+            ReservationFormHandler.normalizeString(c)
+        );
 
         // Filtrar y agregar opciones
         window.ReservasConfig.experiencias.forEach(exp => {
-            if (clasesPermitidas.length === 0 || clasesPermitidas.includes(ReservationFormHandler.normalizeString(exp.nombre))) {
+            const nombreNorm = ReservationFormHandler.normalizeString(exp.nombre);
+
+            // La compatibilidad se basa en si el nombre de la experiencia está en las clases de actividad del anfitrión.
+            if (clasesAnfitrion.includes(nombreNorm)) {
                 const option = document.createElement('option');
                 option.value = exp.id;
                 option.textContent = exp.nombre;
+                option.setAttribute('data-duracion', exp.duracion);
                 selectExperiencia.appendChild(option);
             }
         });
+
+        if (valorAnterior && selectExperiencia.querySelector(`option[value="${valorAnterior}"]`)) {
+            selectExperiencia.value = valorAnterior;
+        }
     },
 
     // Obtiene día de la semana en texto desde fecha YYYY-MM-DD
@@ -824,7 +847,7 @@ export const ReservationFormHandler = {
         const experiencia = (window.ReservasConfig.experiencias || []).find(e => e.id == experienciaId);
         if (!experiencia) return;
 
-        const claseRequerida = ReservationFormHandler.normalizeString(experiencia.clase || '');
+        const nombreRequerido = ReservationFormHandler.normalizeString(experiencia.nombre || '');
 
         let dia = ReservationFormHandler.diaSemana(fecha);
 
@@ -835,15 +858,15 @@ export const ReservationFormHandler = {
             const depto = ReservationFormHandler.normalizeString(a.operativo?.departamento || a.departamento || '');
             const horarios = (window.ReservasConfig.horarios?.[a.id]?.[dia]) || [];
 
-            const cumpleClase = clases.includes(claseRequerida);
+            const cumpleClase = clases.includes(nombreRequerido);
             const cumpleHorario = horarios.length > 0;
             const cumpleDepto = depto === "spa";
 
             return cumpleDepto && cumpleClase && cumpleHorario;
         });
 
-        // Filtra cabinas compatibles con clase (correlacionando subtipos con la clase de la experiencia)
-        const cabinasCompatibles = (window.ReservasConfig.cabinas || []).filter(c => ReservationFormHandler.cabinaSoportaClase(c, claseRequerida));
+        // Filtra cabinas compatibles con el nombre de la experiencia
+        const cabinasCompatibles = (window.ReservasConfig.cabinas || []).filter(c => ReservationFormHandler.cabinaSoportaClase(c, nombreRequerido));
 
         // Actualiza opciones cabinas y anfitriones
         selectCabina.innerHTML = '<option value="">Selecciona cabina</option>';
