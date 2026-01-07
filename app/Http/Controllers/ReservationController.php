@@ -42,24 +42,22 @@ class ReservationController extends Controller
         $experiences = Experience::where('spa_id', $spa->id)->where('activo', true)->get();
         $cabinas = Cabina::where('spa_id', $spa->id)->where('activo', true)->get();
 
-        // Normalizar horarios de anfitriones para el día solicitado
+        // Obtener horarios de anfitriones para el día solicitado
         $diaSemana = strtolower(\Carbon\Carbon::parse($fechaSeleccionada)->locale('es')->isoFormat('dddd'));
         $diaSemana = str_replace(['á','é','í','ó','ú'], ['a','e','i','o','u'], $diaSemana);
 
         $horariosAnfitriones = [];
         foreach ($anfitriones as $anfitrion) {
+            // El horario está en formato ['YYYY-MM-DD' => ['HH:MM', ...]]
             $horariosRaw = $anfitrion->horario->horarios ?? [];
-            $normalizados = [];
-            foreach ($horariosRaw as $dia => $horas) {
-                $diaSinTilde = strtolower(strtr($dia, ['á'=>'a','é'=>'e','í'=>'i','ó'=>'o','ú'=>'u']));
-                $normalizados[$diaSinTilde] = $horas;
-            }
-            $horariosAnfitriones[$anfitrion->id] = $normalizados;
+            // Se obtienen las horas para la fecha seleccionada y se mantiene la estructura que la vista espera.
+            $horariosAnfitriones[$anfitrion->id] = [
+                $diaSemana => $horariosRaw[$fechaSeleccionada] ?? []
+            ];
         }
 
         $anfitrionesDisponibles = $anfitriones->filter(function ($anfitrion) use ($horariosAnfitriones, $diaSemana) {
-            $horario = $horariosAnfitriones[$anfitrion->id] ?? [];
-            return !empty($horario[$diaSemana] ?? []);
+            return !empty($horariosAnfitriones[$anfitrion->id][$diaSemana] ?? []);
         });
 
         $horariosFiltrados = $anfitrionesDisponibles->pluck('horario', 'id');
@@ -165,6 +163,16 @@ class ReservationController extends Controller
                 $q->whereIn('departamento', ['spa', 'salon de belleza']);
             })
             ->firstOrFail();
+
+        // Validar que el anfitrión trabaje en la hora y fecha seleccionada
+        $horariosAnfitrion = $anfitrion->horario->horarios ?? [];
+        $fechaSolicitada = $validated['fecha'];
+        $horaSolicitada = $validated['hora'];
+        $horasDisponiblesDelDia = $horariosAnfitrion[$fechaSolicitada] ?? [];
+
+        if (!in_array($horaSolicitada, $horasDisponiblesDelDia)) {
+            return $this->jsonOrRedirectError($request, 'El anfitrión no tiene un horario de trabajo disponible para la hora seleccionada.');
+        }
 
         if ($this->hayConflictoCliente($validated, $horaInicio, $horaFin, $spa->id)) {
             return $this->jsonOrRedirectError($request, 'El cliente ya tiene una reservación en este horario.');
@@ -480,30 +488,19 @@ class ReservationController extends Controller
             $data['hora_fin'] = date('H:i', strtotime("{$data['hora']} +{$exp->duracion} minutes"));
             $data['hora_fin_descanso'] = date('H:i', strtotime("{$data['hora_fin']} +10 minutes"));
             $data['spa_id'] = $spa->id;
-
-            // Obtener y normalizar horario del anfitrión
+ 
+            // Validar disponibilidad del anfitrión según su horario por fecha
             $anfitrion = Anfitrion::with('horario')->find($data['anfitrion_id']);
-            $horario = $anfitrion?->horario?->horarios ?? [];
-            $horarioNormalizado = [];
-            foreach ($horario as $diaClave => $horas) {
-                $claveLimpia = strtolower(strtr($diaClave, ['á'=>'a','é'=>'e','í'=>'i','ó'=>'o','ú'=>'u']));
-                $horarioNormalizado[$claveLimpia] = $horas;
-            }
-            $horario = $horarioNormalizado;
-
-            // Día en formato sin tildes
-            $diaCarbon = \Carbon\Carbon::parse($data['fecha']);
-            $dia = strtolower($diaCarbon->translatedFormat('l'));
-            $dia = str_replace(['á','é','í','ó','ú'], ['a','e','i','o','u'], $dia);
-
+            $horariosAnfitrion = $anfitrion?->horario?->horarios ?? []; // Formato: ['YYYY-MM-DD' => ['HH:MM', ...]]
+ 
+            $fechaSolicitada = $data['fecha'];
             $horaSolicitada = $data['hora'];
-
-            // Validar disponibilidad exacta del horario del anfitrión
-            $horasDia = array_map('trim', (array) ($horario[$dia] ?? []));
-            $horaSolicitadaNormalizada = trim($horaSolicitada);
-
-            if (!in_array($horaSolicitadaNormalizada, $horasDia)) {
-                $errores["Reserva #$index"][] = "El anfitrión no tiene horario disponible a las {$horaSolicitada} el día {$dia}.";
+ 
+            $horasDisponiblesDelDia = $horariosAnfitrion[$fechaSolicitada] ?? [];
+ 
+            if (!in_array($horaSolicitada, $horasDisponiblesDelDia)) {
+                $diaSemana = \Carbon\Carbon::parse($fechaSolicitada)->locale('es')->translatedFormat('l');
+                $errores["Reserva #$index"][] = "El anfitrión no tiene horario disponible a las {$horaSolicitada} el día {$diaSemana}.";
                 continue;
             }
 

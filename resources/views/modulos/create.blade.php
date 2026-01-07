@@ -33,7 +33,7 @@
         use App\Models\Unidad;
         use App\Models\Spa;
         $unidades = Unidad::orderBy('created_at', 'desc')->get();
-        $spas = Spa::all();
+        $spas = Spa::whereNotIn('nombre', ['new', 'NewUnid'])->get();
     @endphp
 
     <main class="container-fluid my-auto">
@@ -66,13 +66,20 @@
                         </div>
 
                         <div class="mb-3">
-                            <label class="form-label">Logo superior</label>
-                            <input type="file" name="logo_unidad_superior" accept="image/*" class="form-control">
+                            <label class="form-label">Logo de unidad</label>
+                            <input type="file" name="logo_unidad" accept="image/*" class="form-control">
                         </div>
 
                         <div class="mb-3">
-                            <label class="form-label">Logo inferior:</label>
+                            <label class="form-label">Logo principal (para menú lateral)</label>
+                            <input type="file" name="logo_unidad_superior" accept="image/*" class="form-control" required>
+                            <small class="form-text text-muted">Este es el logo que aparece arriba en el menú. Se guardará como <strong>logo.png</strong>.</small>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Imagen decorativa (para menú lateral):</label>
                             <input type="file" name="logo_unidad_inferior" accept="image/*" class="form-control">
+                            <small class="form-text text-muted">Esta es la imagen decorativa de abajo. Se guardará como <strong>decorativo.png</strong>.</small>
                         </div>
 
                         <div class="d-flex gap-2 mt-4">
@@ -102,7 +109,11 @@
                             @foreach ($unidades as $unidad)
                                 <li class="list-group-item d-flex justify-content-between align-items-center px-0" id="unidad-row-{{ $unidad->id }}">
                                     <div>
-                                        <span class="me-2">{{ $unidad->nombre_unidad }}</span>
+                                        @if($unidad->logo_superior)
+                                            <img src="{{ asset($unidad->logo_superior) }}" alt="{{ $unidad->nombre_unidad }}" class="me-2" style="height: 40px; width: auto; object-fit: contain;">
+                                        @else
+                                            <span class="me-2">{{ $unidad->nombre_unidad }}</span>
+                                        @endif
                                         <a href="{{ route('unidad.edit', $unidad->id) }}" class="ms-3 text-secondary" title="Editar unidad">
                                             <i class="fas fa-edit"></i>
                                         </a>

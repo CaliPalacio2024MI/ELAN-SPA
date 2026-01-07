@@ -19,10 +19,6 @@ class AnfitrionController extends Controller
     {
         $spaNombre = session('current_spa');
 
-        if (!in_array($spaNombre, ['palacio', 'princess', 'pierre'])) {
-            return abort(403, 'No se encontró un spa válido en la base de datos.');
-        }
-
         $spa = Spa::where('nombre', $spaNombre)->first();
         if (!$spa) {
             return abort(403, 'No se encontró el spa en la base de datos.');
@@ -289,13 +285,24 @@ class AnfitrionController extends Controller
     public function storeHorario(Request $request, $id)
     {
         $anfitrion = Anfitrion::findOrFail($id);
-        $horarios = $request->input('horarios', []);
+
+        // El input 'horarios' es un string JSON con los horarios por fecha.
+        $horariosJson = $request->input('horarios', '{}');
+        $horarios = json_decode($horariosJson, true);
+
+        // Limpiar fechas que no tengan horas asignadas para no guardar datos vacíos.
+        $horariosLimpios = array_filter($horarios);
 
         HorarioAnfitrion::updateOrCreate(
             ['anfitrion_id' => $anfitrion->id],
-            ['horarios' => $horarios]
+            ['horarios' => $horariosLimpios]
         );
 
-        return redirect()->route('anfitriones.index')->with('mensaje_exito', 'Horario guardado correctamente.');
+        if ($request->expectsJson()) {
+            return response()->json(['success' => true, 'message' => 'Horario guardado correctamente.']);
+        }
+
+        return redirect()->route('anfitriones.horario.edit', ['anfitrion' => $anfitrion->id, 'mes' => $request->input('mes_actual')])
+            ->with('mensaje_exito', 'Horario guardado correctamente.');
     }
 }

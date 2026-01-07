@@ -114,13 +114,10 @@
                  data-unidad-id="{{ $unidad->id }}"
                  data-unidad-nombre="{{ $unidad->nombre_unidad }}"
                  title="{{ $unidad->nombre_unidad }}"
-                 style="background: {{ $unidad->color_unidad ?? 'transparent' }};"
+                 style="background: transparent; display: flex; justify-content: center; align-items: center;"
             >
-                @if($unidad->logo_superior)
-                    <img src="{{ asset('storage/' . $unidad->logo_superior) }}" alt="{{ $unidad->nombre_unidad }}" />
-                @else
-                    {{-- Añadimos un estilo para que el nombre sea visible sobre el color de fondo --}}
-                    <span class="unidad-nombre" style="color: white; font-weight: bold; text-align: center;">{{ $unidad->nombre_unidad }}</span>
+                @if($unidad->logo_unidad)
+                    <img src="{{ asset($unidad->logo_unidad) }}" alt="{{ $unidad->nombre_unidad }}" style="max-width: 90%; max-height: 90%; object-fit: contain;" />
                 @endif
             </a>
         @endforeach
@@ -191,8 +188,8 @@
             body: JSON.stringify({})
         }).then(response => {
             if (response.ok) {
-                // Redirigir a la página principal de reservaciones o a donde necesites
-                window.location.href = "{{ route('reservations.index') }}";
+                // Redirigir a la página de la nueva unidad
+                window.location.href = "{{ route('newunid.index') }}";
             }
         });
     }

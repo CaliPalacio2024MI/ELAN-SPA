@@ -11,16 +11,12 @@
     </script>
     @php exit; @endphp
 @endif
-@section('logo_img')
-@php
-    $spasFolder = session('current_spa') ?? strtolower(optional(Auth::user()->spa)->nombre);
-@endphp
-<img src="{{ asset("images/$spasFolder/logo.png") }}" alt="Logo de {{ ucfirst($spasFolder) }}">
 @endsection
 
 @section('css')
 @php
     $spaCss = session('current_spa') ?? strtolower(optional(Auth::user()->spa)->nombre);
+    if ($spaCss === 'newunid') $spaCss = 'palacio';
     if (!$spaCss) {
         $spaCss = 'palacio'; 
     }
@@ -36,14 +32,6 @@
 
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 <link href="https://fonts.googleapis.com/css2?family=Kumbh+Sans:wght@300;400;600;700&display=swap" rel="stylesheet">
-@endsection
-
-@section('decorativo')
-    @php
-        $spasFolder = session('current_spa') ?? strtolower(optional(Auth::user()->spa)->nombre);
-        $linDecorativa = asset("images/$spasFolder/decorativo.png");
-    @endphp
-    <div class="sidebar-decoration" style="background-image: url('{{ $linDecorativa}}');"></div>
 @endsection
 
 @section('content')
@@ -458,4 +446,3 @@
         }
     });
 </script>
-

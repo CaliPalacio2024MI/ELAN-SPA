@@ -4,6 +4,44 @@
 
 <!DOCTYPE html>
 <html lang="es">
+@php
+    use App\Models\Unidad;
+    use App\Models\Spa;
+
+    if (Auth::user()->rol === 'master') {
+        $area = request()->segment(1);
+        if (in_array($area, ['palacio', 'princess', 'pierre'])) {
+            session(['current_spa' => $area]);
+        }
+    }
+
+    $unidadSeleccionada = session('current_unidad_id') ? Unidad::find(session('current_unidad_id')) : null;
+    $menuColorStyle = '';
+    
+    if ($unidadSeleccionada) {
+        // Si estamos en una unidad personalizada (NewUnid), forzamos el contexto al Spa "NewUnid"
+        // que contiene los datos clonados de Palacio. Esto hace que todo el menú (reservaciones, boutique, etc.)
+        // opere de forma independiente con los datos de NewUnid.
+        $newUnidSpa = Spa::where('nombre', 'NewUnid')->first();
+        if ($newUnidSpa) {
+            session(['current_spa' => strtolower($newUnidSpa->nombre)]); // 'newunid'
+            session(['current_spa_id' => $newUnidSpa->id]);
+        }
+
+        $logoUrl = $unidadSeleccionada->logo_superior ? asset($unidadSeleccionada->logo_superior) : asset("images/palacio/logo.png");
+        $decorativoUrl = $unidadSeleccionada->logo_inferior ? asset($unidadSeleccionada->logo_inferior) : asset("images/palacio/decorativo.png");
+        if ($unidadSeleccionada->color_unidad) {
+            $menuColorStyle = 'background-color: ' . $unidadSeleccionada->color_unidad . ' !important;';
+        }
+    } else {
+        $spasFolder = session('current_spa') ?? strtolower(optional(Auth::user()->spa)->nombre);
+        if ($spasFolder === 'new') {
+            $spasFolder = 'palacio';
+        }
+        $logoUrl = asset("images/$spasFolder/logo.png");
+        $decorativoUrl = asset("images/$spasFolder/decorativo.png");
+    }
+@endphp
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -18,23 +56,22 @@
     
     <title>ELAN SPA & WELLNESS EXPERIENCE</title>
 
+    @php
+        $spaCss = session('current_spa') ?? strtolower(optional(Auth::user()->spa)->nombre);
+        if ($spaCss === 'newunid') $spaCss = 'palacio';
+        if (!$spaCss) $spaCss = 'palacio';
+    @endphp
+    @if (file_exists(public_path('build/manifest.json')) || file_exists(public_path('hot')))
+        @vite('resources/css/menus/' . $spaCss . '/menu_styles.css')
+    @endif
+
     @yield('css') 
 </head>
 <body class="sidebar-hover">
-    @php
-  
-    if (Auth::user()->rol === 'master') {
-        $area = request()->segment(1);
-        if (in_array($area, ['palacio', 'princess', 'pierre'])) {
-            session(['current_spa' => $area]);
-        }
-    }
-    @endphp
-
-        <nav class="sidebar">
+        <nav class="sidebar" style="{{ $menuColorStyle }}">
             <div class="logo">
             
-                @yield('logo_img')
+                <img src="{{ $logoUrl }}" alt="Logo">
             </div>
             <ul>
             
@@ -119,7 +156,7 @@
                 </li>
             </ul>
             
-            @yield('decorativo') 
+            <div class="sidebar-decoration" style="background-image: url('{{ $decorativoUrl }}');"></div>
         </nav>
 
     <div class="container">

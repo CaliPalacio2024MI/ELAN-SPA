@@ -14,16 +14,10 @@
 
 @endsection
 
-@section('logo_img')
-@php
-    $spasFolder = session('current_spa') ?? strtolower(optional(Auth::user()->spa)->nombre);
-@endphp
-<img src="{{ asset("images/$spasFolder/logo.png") }}" alt="Logo de {{ ucfirst($spasFolder) }}">
-@endsection
-
 @section('css')
 @php
     $spaCss = session('current_spa') ?? strtolower(optional(Auth::user()->spa)->nombre);
+    if ($spaCss === 'newunid') $spaCss = 'palacio';
 @endphp
 @if (file_exists(public_path('build/manifest.json')) || file_exists(public_path('hot')))
     @vite([
@@ -34,14 +28,6 @@
 
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 <link href="https://fonts.googleapis.com/css2?family=Kumbh+Sans:wght@300;400;600;700&display=swap" rel="stylesheet">
-@endsection
-
-@section('decorativo')
-    @php
-        $spasFolder = session('current_spa') ?? strtolower(optional(Auth::user()->spa)->nombre);
-        $linDecorativa = asset("images/$spasFolder/decorativo.png");
-    @endphp
-    <div class="sidebar-decoration" style="background-image: url('{{ $linDecorativa}}');"></div>
 @endsection
 
 //<script>
@@ -64,7 +50,7 @@
         </button>
 
         <form method="GET" action="{{ route('anfitriones.index') }}" class="search-form d-flex mb-3">
-            <input type="text" name="search" value="{{ request('search') }}" class="form-control search-input" placeholder="Buscar por nombre, RFC, rol, departamento o categoría...">
+            <input type="text" name="search" value="{{ request('search') }}" class="form-control search-input" placeholder="Buscar por nombre, RFC, rol, área o categoría...">
             <button type="submit" class="btn btn-buscar">
                 <i class="fas fa-search"></i>
             </button>
@@ -77,7 +63,7 @@
                     <th>Nombre</th>
                     <th>Apellido paterno</th>
                     <th>Rol</th>
-                    <th>Departamento</th>
+                    <th>Área</th>
                     <th>Especialidades</th>
                     <th>Accesos</th>
                     <th>Activo</th>
@@ -210,7 +196,7 @@
                         </div>
 
                         <div class="mb-3">
-                            <label for="departamento" class="form-label">Departamento</label>
+                            <label for="departamento" class="form-label">Área</label>
                             <select class="form-select {{ $errors->create->has('departamento') ? 'is-invalid' : '' }}" id="departamento" name="departamento" required>
                                 <option value="spa" {{ (!$fromEdit && old('departamento') == 'spa') ? 'selected' : '' }}>Spa</option>
                                 <option value="gym" {{ (!$fromEdit && old('departamento') == 'gym') ? 'selected' : '' }}>Gimnasio</option>
@@ -387,7 +373,7 @@
                     </div>
                     
                     <div class="mb-3">
-                        <label for="edit_departamento" class="form-label">Departamento</label>
+                        <label for="edit_departamento" class="form-label">Área</label>
                         <select class="form-select {{ $errors->edit->has('departamento') ? 'is-invalid' : '' }}" id="edit_departamento" name="departamento" required>
                             <option value="spa">Spa</option>
                             <option value="gym">Gimnasio</option>
@@ -633,4 +619,3 @@
     });
 </script>
 @endsection
-

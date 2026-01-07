@@ -26,6 +26,8 @@ Route::middleware(['auth'])->group(function () {
     })->name('dashboard');
 
     Route::get('/modulos/modulos', function () {
+        // Limpiar el contexto de spa para mostrar todas las unidades
+        session()->forget(['current_spa', 'current_spa_id']);
         return view('modulos.modulos');
     })->name('modulos');
 

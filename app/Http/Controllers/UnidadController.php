@@ -20,6 +20,7 @@ class UnidadController extends Controller
         $validated = $request->validate([
             'nombre_unidad' => 'required|string|max:255|unique:unidades,nombre_unidad',
             'color_unidad' => 'required|string|max:7',
+            'logo_unidad' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
             'logo_unidad_superior' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
             'logo_unidad_inferior' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
         ]);
@@ -29,15 +30,22 @@ class UnidadController extends Controller
             $data = [
                 'nombre_unidad' => $validated['nombre_unidad'],
                 'color_unidad' => $validated['color_unidad'],
-                'spa_id' => session('current_spa_id') ?? null,
+                'spa_id' => \App\Models\Spa::where('nombre', 'new')->first()->id ?? null,
             ];
  
+            $this->handleLogoUpload($request, 'logo_unidad', $data, 'logo_unidad');
             $this->handleLogoUpload($request, 'logo_unidad_superior', $data, 'logo_superior');
             $this->handleLogoUpload($request, 'logo_unidad_inferior', $data, 'logo_inferior');
             
-            Unidad::create($data);
+            $unidad = Unidad::create($data);
             DB::commit();
-            return redirect()->route('unidades.create')->with('success', 'Unidad creada exitosamente.');
+            
+            // Seleccionar automáticamente la nueva unidad
+            session(['current_unidad_id' => $unidad->id]);
+            session(['current_unidad_nombre' => $unidad->nombre_unidad]);
+            session(['current_spa_id' => \App\Models\Spa::where('nombre', 'new')->first()->id ?? null]);
+            
+            return redirect()->route('modulos')->with('success', 'Unidad creada exitosamente.');
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error('Error al crear unidad: ' . $e->getMessage());
@@ -70,6 +78,7 @@ class UnidadController extends Controller
         $validated = $request->validate([
             'nombre_unidad' => 'required|string|max:255|unique:unidades,nombre_unidad,' . $unidad->id,
             'color_unidad' => 'required|string|max:7',
+            'logo_unidad' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
             'logo_unidad_superior' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
             'logo_unidad_inferior' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
         ]);
@@ -81,6 +90,7 @@ class UnidadController extends Controller
                 'color_unidad' => $validated['color_unidad'],
             ];
  
+            $this->handleLogoUpload($request, 'logo_unidad', $data, 'logo_unidad', $unidad);
             $this->handleLogoUpload($request, 'logo_unidad_superior', $data, 'logo_superior', $unidad);
             $this->handleLogoUpload($request, 'logo_unidad_inferior', $data, 'logo_inferior', $unidad);
  
@@ -127,6 +137,13 @@ class UnidadController extends Controller
         session(['current_unidad_id' => $unidad->id]);
         session(['current_unidad_nombre' => $unidad->nombre_unidad]);
 
+        // Configurar explícitamente el contexto de Spa para NewUnid
+        $newUnidSpa = \App\Models\Spa::where('nombre', 'NewUnid')->first();
+        if ($newUnidSpa) {
+            session(['current_spa' => strtolower($newUnidSpa->nombre)]);
+            session(['current_spa_id' => $newUnidSpa->id]);
+        }
+
         return response()->json(['success' => true, 'message' => 'Unidad seleccionada.']);
     }
 
@@ -135,18 +152,30 @@ class UnidadController extends Controller
         // Si no se está actualizando, necesitamos el nombre de la unidad para crear la carpeta
         $unidadNombre = $unidad ? $unidad->nombre_unidad : $data['nombre_unidad'];
         $slug = Str::slug($unidadNombre);
-        $directory = "images/{$slug}";
+        $directory = public_path("images/{$slug}");
 
         if ($request->hasFile($fileKey)) {
+            // Crea el directorio si no existe
+            if (!file_exists($directory)) {
+                mkdir($directory, 0755, true);
+            }
             // Elimina el logo anterior si existe
             if ($unidad && $unidad->{$dataKey}) {
-                // Usamos el disco 'public_path' para interactuar con la carpeta public/
-                Storage::disk('public_path')->delete($unidad->{$dataKey});
+                $oldPath = public_path($unidad->{$dataKey});
+                if (file_exists($oldPath)) {
+                    unlink($oldPath);
+                }
             }
-            // Definimos el nombre del archivo según la clave (logo.png o decorativo.png)
-            $fileName = ($dataKey === 'logo_superior') ? 'logo.png' : 'decorativo.png';
-            $path = $request->file($fileKey)->storeAs($directory, $fileName, 'public_path');
-            $data[$dataKey] = $path; // Guardamos la ruta relativa: 'images/mi-unidad/logo.png'
+            // Definimos el nombre del archivo según la clave
+            if ($dataKey === 'logo_unidad') {
+                $fileName = 'logo_unidad.png';
+            } elseif ($dataKey === 'logo_superior') {
+                $fileName = 'logo.png';
+            } else {
+                $fileName = 'decorativo.png';
+            }
+            $request->file($fileKey)->move($directory, $fileName);
+            $data[$dataKey] = "images/{$slug}/{$fileName}"; // Guardamos la ruta relativa: 'images/mi-unidad/logo.png'
         }
     }
 }

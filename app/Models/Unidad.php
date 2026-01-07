@@ -14,6 +14,7 @@ class Unidad extends Model
     protected $fillable = [
         'nombre_unidad',
         'color_unidad',
+        'logo_unidad',
         'logo_superior',
         'logo_inferior',
         'spa_id',
