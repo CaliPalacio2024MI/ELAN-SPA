@@ -1,9 +1,15 @@
 @extends('layouts.spa_menu')
 
+@section('logo_img')
+    @php
+        $spasFolder = session('current_spa') ?? strtolower(optional(Auth::user()->spa)->nombre);
+    @endphp
+    <img src="{{ asset("images/$spasFolder/logo.png") }}" alt="Logo de {{ ucfirst($spasFolder) }}">
+@endsection
+
 @section('css')
     @php
         $spaCss = session('current_spa') ?? strtolower(optional(Auth::user()->spa)->nombre);
-        if ($spaCss === 'newunid') $spaCss = 'palacio';
     @endphp
     @if (file_exists(public_path('build/manifest.json')) || file_exists(public_path('hot')))
         @vite('resources/css/menus/' . $spaCss . '/menu_styles.css')
@@ -14,6 +20,14 @@
         @vite('resources/css/componentes/modal.css')
     @endif
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+@endsection
+
+@section('decorativo')
+    @php
+        $spasFolder = session('current_spa') ?? strtolower(optional(Auth::user()->spa)->nombre);
+        $linDecorativa = asset("images/$spasFolder/decorativo.png");
+    @endphp
+    <div class="sidebar-decoration" style="background-image: url('{{ $linDecorativa }}');"></div>
 @endsection
 
 @section('content')
@@ -76,7 +90,7 @@
                 <div class="new-articulo-container" id="orden_compra_container">
                     <label class="label-new-articulo" for="new_folio_orden">Folio Orden de Compra *</label>
                     <input type="text" class="input-new-articulo" id="new_folio_orden"
-                        placeholder="Ingrese número de orden de compra" autocomplete="off" readonly>
+                        placeholder="Ingrese número de orden de compra" autocomplete="off">
                 </div>
                 <div class="new-articulo-container">
                     <label class="label-new-articulo" for="new_folio_factura">Folio de Factura *</label>
@@ -103,7 +117,7 @@
                     <div class="new-articulo-container" style="padding: 0;">
                         <label class="label-new-articulo" for="new_fecha">Fecha de Caducidad</label>
                         <input type="date" class="input-new-articulo" id="new_fecha"
-                            placeholder="Fecha de Caducidad" readonly>
+                            placeholder="Fecha de Caducidad">
                     </div>
                     <div style="display: flex; align-items: center; padding-top: 22px; width: 50px;">
                         {{-- el primero no tendría esto, pero todos los que se van agregando sí --}}
@@ -213,7 +227,9 @@
                 <i class="fa-solid fa-clock-rotate-left" style="padding-right: 10px;"></i>Historial de Compras
             </a>
             <h2>Inventario Boutique</h2>
-            <div></div>
+            <a href="{{ route('boutique.inventario.eliminaciones') }}" class="btn">
+                <i class="fa-solid fa-clock-rotate-left" style="padding-right: 10px;"></i>Compras Eliminadas
+            </a>
         </div>
 
         <!-- Agregar filtros aquí en el futuro -->
@@ -245,6 +261,7 @@
                     <table class="table" id="tabla-compras">
                         <thead>
                             <tr>
+                                <th>Id</th>
                                 <th>No. Auxiliar</th>
                                 <th>Nombre</th>
                                 <th>Cantidad</th>
@@ -255,6 +272,7 @@
                         <tbody>
                             @foreach ($compras as $compra)
                                 <tr class="fila-articulo">
+                                    <td>{{ $compra->compra_id }}</td>
                                     <td>{{ str_pad($compra->numero_auxiliar, 10, '0', STR_PAD_LEFT) }}</td>
                                     <td>{{ $compra->nombre_articulo }}</td>
                                     <td>{{ $compra->cantidad_actual }}</td>
@@ -450,19 +468,7 @@
         }
 
         function nuevaCompra() {
-            // Mostrar el modal
             MundoImperial.modalSlotMostrar("modal-compra", "Agregar Nueva Compra");
-
-            // Rellenar campos automáticamente
-            document.getElementById("new_folio_orden").value = "com2500001";
-            document.getElementById("new_folio_factura").value = "";
-
-            // Obtener la fecha actual en formato YYYY-MM-DD
-            const hoy = new Date();
-            const fechaFormateada = hoy.toISOString().split('T')[0];
-            document.getElementById("new_fecha").value = fechaFormateada;
-
-            // Poner el foco en el campo de autocompletar artículo
             document.getElementById("autocomplete_articulo").focus();
         }
 
@@ -726,10 +732,10 @@
 
             compraSeleccionada = {
                 id: compraId,
-                numero_auxiliar: celdas[0].textContent,
-                nombre_articulo: celdas[1].textContent,
-                cantidad_actual: celdas[2].textContent,
-                fecha_caducidad: celdas[3].textContent !== '-' ? celdas[3].textContent : ''
+                numero_auxiliar: celdas[1].textContent,
+                nombre_articulo: celdas[2].textContent,
+                cantidad_actual: celdas[3].textContent,
+                fecha_caducidad: celdas[4].textContent !== '-' ? celdas[4].textContent : ''
             };
 
             // Llenar el modal con los datos actuales

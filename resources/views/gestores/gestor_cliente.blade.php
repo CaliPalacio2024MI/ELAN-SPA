@@ -13,10 +13,16 @@
 
 @extends('layouts.spa_menu')
 
+@section('logo_img')
+@php
+    $spasFolder = session('current_spa') ?? strtolower(optional(Auth::user()->spa)->nombre);
+@endphp
+<img src="{{ asset("images/$spasFolder/logo.png") }}" alt="Logo de {{ ucfirst($spasFolder) }}">
+@endsection
+
 @section('css')
 @php
     $spaCss = session('current_spa') ?? strtolower(optional(Auth::user()->spa)->nombre);
-    if ($spaCss === 'newunid') $spaCss = 'palacio';
     if (!$spaCss) {
         $spaCss = 'palacio'; 
     }
@@ -33,16 +39,23 @@
 <link href="https://fonts.googleapis.com/css2?family=Kumbh+Sans:wght@300;400;600;700&display=swap" rel="stylesheet">
 @endsection
 
+@section('decorativo')
+    @php
+        $spasFolder = session('current_spa') ?? strtolower(optional(Auth::user()->spa)->nombre);
+        $linDecorativa = asset("images/$spasFolder/decorativo.png");
+    @endphp
+    <div class="sidebar-decoration" style="background-image: url('{{ $linDecorativa}}');"></div>
+@endsection
+
 @section('content')
 
 <header class="main-header">
     <h2>GESTIONAR CLIENTES</h2>
 </header>
 
-    <div class="botonera-top">
+<div class="botonera-top">
     <div class="d-flex gap-2">
-        @php $qs = http_build_query(request()->query()); @endphp
-        <a href="{{ route('clientes.export') }}{{ $qs ? '?'.$qs : '' }}" class="btn btns d-flex align-items-center justify-content-center">
+        <a href="{{ route('clientes.export') }}" class="btn btns d-flex align-items-center justify-content-center">
             <i class="fas fa-download"></i>
         </a>
 
@@ -265,3 +278,4 @@
     @endif
      @include('components.session-alert')
     @endsection
+

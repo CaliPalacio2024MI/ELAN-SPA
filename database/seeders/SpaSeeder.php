@@ -39,13 +39,6 @@ class SpaSeeder extends Seeder
                 'created_at' => now(),
                 'updated_at' => now(),
             ],
-            [
-                'id' => 4,
-                'nombre' => 'new',
-                'direccion' => '',
-                'created_at' => now(),
-                'updated_at' => now(),
-            ],
         ]);
 
         

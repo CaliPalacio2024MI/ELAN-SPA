@@ -1,9 +1,15 @@
 @extends('layouts.spa_menu')
 
+@section('logo_img')
+    @php
+        $spasFolder = session('current_spa') ?? strtolower(optional(Auth::user()->spa)->nombre);
+    @endphp
+    <img src="{{ asset("images/$spasFolder/logo.png") }}" alt="Logo de {{ ucfirst($spasFolder) }}">
+@endsection
+
 @section('css')
     @php
         $spaCss = session('current_spa') ?? strtolower(optional(Auth::user()->spa)->nombre);
-        if ($spaCss === 'newunid') $spaCss = 'palacio';
     @endphp
     @if (file_exists(public_path('build/manifest.json')) || file_exists(public_path('hot')))
         @vite('resources/css/menus/' . $spaCss . '/menu_styles.css')
@@ -16,18 +22,22 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 @endsection
 
+@section('decorativo')
+    @php
+        $spasFolder = session('current_spa') ?? strtolower(optional(Auth::user()->spa)->nombre);
+        $linDecorativa = asset("images/$spasFolder/decorativo.png");
+    @endphp
+    <div class="sidebar-decoration" style="background-image: url('{{ $linDecorativa }}');"></div>
+@endsection
+
 @section('content')
     <div class="main-container">
         <div class="header">
             <a href="{{ route('boutique.inventario') }}" class="btn">
                 <i class="fa-solid fa-box" style="padding-right: 10px;"></i>Regresar a Inventario
             </a>
-            <h2>Historial de Compras Eliminadas</h2> {{-- Título centrado --}}
-            <div style="display: flex; gap: 10px;"> {{-- Contenedor para los botones de la derecha --}}
-                <a href="{{ route('boutique.inventario.eliminaciones.exportar', ['fecha_inicio' => $fechaInicio, 'fecha_fin' => $fechaFin]) }}" class="btn btns d-flex align-items-center justify-content-center">
-                    <i class="fas fa-download"></i>
-                </a>
-            </div>
+            <h2>Historial de Compras Eliminadas</h2>
+            <div></div>
         </div>
 
         <form method="GET" action="{{ route('boutique.inventario.eliminaciones') }}" class="filters-container">
@@ -53,7 +63,7 @@
             <table class="table" id="tabla-eliminaciones">
                 <thead>
                     <tr>
-                        
+                        <th>Id</th>
                         <th>Usuario</th>
                         <th>Tipo</th>
                         <th>Folio Orden</th>
@@ -84,7 +94,7 @@
 
                         @foreach ($eliminacionesDelFolio as $eliminacion)
                             <tr class="fila-articulo {{ $claseColor }}">
-                                
+                                <td>{{ $eliminacion->id }}</td>
                                 <td>{{ $eliminacion->usuario_elimino ?? '-' }}</td>
                                 <td>{{ ucfirst($eliminacion->tipo_compra) }}</td>
                                 <td>{{ $eliminacion->folio_orden_compra ?? '-' }}</td>
