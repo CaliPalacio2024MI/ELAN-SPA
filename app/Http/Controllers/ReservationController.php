@@ -491,9 +491,19 @@ class ReservationController extends Controller
  
             // Validar disponibilidad del anfitrión según su horario por fecha
             $anfitrion = Anfitrion::with('horario')->find($data['anfitrion_id']);
-            $horariosAnfitrion = $anfitrion?->horario?->horarios ?? []; // Formato: ['YYYY-MM-DD' => ['HH:MM', ...]]
- 
-            $fechaSolicitada = $data['fecha'];
+            $horario = $anfitrion?->horario?->horarios ?? [];
+            $horarioNormalizado = [];
+            foreach ($horario as $diaClave => $horas) {
+                $claveLimpia = strtolower(strtr($diaClave, ['á'=>'a','é'=>'e','í'=>'i','ó'=>'o','ú'=>'u']));
+                $horarioNormalizado[$claveLimpia] = $horas;
+            }
+            $horario = $horarioNormalizado;
+
+            // Día en formato sin tildes
+            \Carbon\Carbon::setLocale('es');
+            $dia = strtolower(\Carbon\Carbon::parse($data['fecha'])->isoFormat('dddd'));
+            $dia = str_replace(['á','é','í','ó','ú'], ['a','e','i','o','u'], $dia);
+
             $horaSolicitada = $data['hora'];
  
             $horasDisponiblesDelDia = $horariosAnfitrion[$fechaSolicitada] ?? [];
@@ -560,8 +570,18 @@ class ReservationController extends Controller
         }
 
         // Crear grupo y reservas
+        // --- Calcular o crear el primer cliente del grupo ---
+        $primerClienteId = $reservasValidas[0]['cliente_existente_id'] ?? Client::create([
+          'nombre' => $reservasValidas[0]['nombre_cliente'],
+          'apellido_paterno' => $reservasValidas[0]['apellido_paterno_cliente'],
+          'apellido_materno' => $reservasValidas[0]['apellido_materno_cliente'] ?? null,
+          'correo' => $reservasValidas[0]['correo_cliente'],
+          'telefono' => $reservasValidas[0]['telefono_cliente'],
+          'tipo_visita' => $reservasValidas[0]['tipo_visita_cliente'],
+        ])->id;
+
         $grupo = GrupoReserva::create([
-            'cliente_id' => $reservasValidas[0]['cliente_existente_id'] ?? null,
+            'cliente_id' => $primerClienteId,
         ]);
 
         foreach ($reservasValidas as $i => $data) {
