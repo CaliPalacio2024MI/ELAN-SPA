@@ -10,10 +10,16 @@
     @endif
 @endsection
 
+@section('logo_img')
+    @php
+        $spasFolder = session('current_spa') ?? strtolower(optional(Auth::user()->spa)->nombre);
+    @endphp
+    <img src="{{ asset("images/$spasFolder/logo.png") }}" alt="Logo de {{ ucfirst($spasFolder) }}">
+@endsection
+
 @section('css')
     @php
         $spaCss = session('current_spa') ?? strtolower(optional(Auth::user()->spa)->nombre);
-        if ($spaCss === 'newunid') $spaCss = 'palacio';
     @endphp
     @if (file_exists(public_path('build/manifest.json')) || file_exists(public_path('hot')))
         @vite('resources/css/menus/' . $spaCss . '/menu_styles.css')
@@ -24,6 +30,14 @@
     @endif
 
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+@endsection
+
+@section('decorativo')
+    @php
+        $spasFolder = session('current_spa') ?? strtolower(optional(Auth::user()->spa)->nombre);
+        $linDecorativa = asset("images/$spasFolder/decorativo.png");
+    @endphp
+    <div class="sidebar-decoration" style="background-image: url('{{ $linDecorativa }}');"></div>
 @endsection
 
 @section('content')
@@ -279,6 +293,7 @@
                     <table class="table">
                         <thead>
                             <tr>
+                                <th>Número Auxiliar</th>
                                 <th>Nombre</th>
                                 <th>Descripción</th>
                             </tr>
@@ -289,6 +304,7 @@
                         data.articulos.forEach(articulo => {
                             contenidoHTML += `
                         <tr>
+                            <td>${String(articulo.numero_auxiliar).padStart(10, '0')}</td>
                             <td>${articulo.nombre_articulo}</td>
                             <td>${articulo.descripcion || 'Sin descripción'}</td>
                         </tr>

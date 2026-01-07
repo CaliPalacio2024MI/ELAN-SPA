@@ -4,7 +4,6 @@ use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Auth;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\SalonController;
-use App\Http\Controllers\BoutiqueController;
 
 // Archivos de rutas divididas para modularidad
 require __DIR__.'/auth.php';          
@@ -18,7 +17,6 @@ require __DIR__.'/experiences.php';
 require __DIR__.'/clients.php';
 require __DIR__.'/boutique.php';
 require __DIR__.'/gimnasio.php';
-require __DIR__.'/unidad.php';
 
 /**
  * Ruta para asignar el spa actual en sesión.
@@ -27,8 +25,6 @@ require __DIR__.'/unidad.php';
 Route::post('/set-spa/{spa}', function ($spa) {
     $spaModel = \App\Models\Spa::where('nombre', $spa)->first();
     if ($spaModel) {
-        // Limpiar sesión de unidad personalizada para evitar conflictos
-        session()->forget(['current_unidad_id', 'current_unidad_nombre']);
         session([
             'current_spa' => strtolower($spaModel->nombre),
             'current_spa_id' => $spaModel->id
@@ -50,13 +46,4 @@ Route::get('/', function () {
  */
 Route::middleware(['auth'])->group(function () {
     Route::get('/salon', [SalonController::class, 'index'])->name('salon.index');
-    Route::get('/boutique/inventario/eliminaciones/exportar', [BoutiqueController::class, 'exportar_eliminaciones'])->name('boutique.inventario.eliminaciones.exportar');
-
-    // Ruta para la nueva unidad de negocio
-    Route::get('/NewUnid', function () {
-        return redirect()->route('reservations.index');
-    })->name('newunid.index');
 });
-
-// La ruta para la página de módulos ya existe en routes/dashboard.php, por lo que no es necesario duplicarla aquí.
-// Las rutas de 'unidad' se gestionarán en routes/unidad.php para mantener el orden.

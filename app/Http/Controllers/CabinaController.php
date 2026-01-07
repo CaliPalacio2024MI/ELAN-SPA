@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\Log;
 class CabinaController extends Controller
 {
     // Muestra la lista de cabinas asociadas al spa actual
-    public function index(Request $request)
+    public function index()
     {
         $spaNombre = session('current_spa');
         if (!$spaNombre) {
@@ -22,18 +22,7 @@ class CabinaController extends Controller
             return abort(403, 'No se encontró el spa en la base de datos.');
         }
 
-        $query = Cabina::where('spa_id', $spa->id);
-
-        // Filtrado por término de búsqueda (nombre o clase)
-        $search = trim($request->query('search', ''));
-        if ($search !== '') {
-            $query->where(function ($q) use ($search) {
-                $q->where('nombre', 'like', "%{$search}%")
-                  ->orWhere('clase', 'like', "%{$search}%");
-            });
-        }
-
-        $cabinas = $query->get();
+        $cabinas = Cabina::where('spa_id', $spa->id)->get();
 
         // Obtiene clases únicas de experiencias para filtro o uso en la vista
         $clasesDisponibles = \App\Models\Experience::where('spa_id', $spa->id)
@@ -42,16 +31,7 @@ class CabinaController extends Controller
             ->filter()
             ->values();
 
-        // Agrupa experiencias por clase para poblar subtipos (ej. tipos de masaje)
-        $experienciasPorClase = \App\Models\Experience::where('spa_id', $spa->id)
-            ->get()
-            ->groupBy('clase')
-            ->map(function ($col) {
-                return $col->pluck('nombre')->values();
-            })
-            ->toArray();
-
-        return view('gestores.gestor_cabinas', compact('cabinas', 'clasesDisponibles', 'experienciasPorClase'));
+        return view('gestores.gestor_cabinas', compact('cabinas', 'clasesDisponibles'));
     }
 
     // Valida y guarda una nueva cabina

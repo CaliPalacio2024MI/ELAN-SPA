@@ -41,14 +41,14 @@
     Salud y responsabilidad:
 </div>
 <div class="reglamento-texto-normal">
-    1. Antes de iniciar su rutina de ejercicio le pedimos registrarse con nuestro personal.
+    1. Ambos de iniciar su rutina de ejercicio le pedimos registrarse con nuestro personal.
     <br><br>
     2. Si tuvieras alguna condición médica que debamos considerar favor de indicarlos en la hoja de registro, antes de
     iniciar con su rutina de ejercicio.
     <br><br>
     3. Por seguridad es indispensable el uso de ropa y calzado adecuado para hacer ejercicio.
     <br><br>
-    4. Los usuarios entre 15 y los 17 años deberán estar acompañados de un adulto responsable.
+    4. Los usuarios entre 15 y los 17 años deberán estar acompañados de un adulta responsable.
     <br><br>
     5. Nos interesa brindarle un área limpia, ordenada y en buenas condiciones.
     <br><br>
@@ -60,14 +60,14 @@
     8. Con el fin de mantener en buenas condiciones los equipos, evite golpear, lanzar o cualquier otra acción que pueda
     dañarlos.
     <br><br>
-    9. El gimnasio facilitará toallas para uso personal dentro de las instalaciones, la que deberán entregar al término
+    9.El gimnasio facilitara toallas para uso personal dentro de las instalaciones, la que deberán entregar al termino
     de su entrenamiento.
     <br><br>
     10. Es responsabilidad absoluta del huésped cuidar sus objetos personales y de valor. El gimnasio no se hace
     responsable por objetos olvidados en el área , favor de preguntar al encargado.
 </div>
 <div class="reglamento-texto-titulo">
-    Horario de servicio:
+    Horario de servicio::
 </div>
 <div class="reglamento-texto-normal">
     Lunes a Domingo de 6:00 a.m. a 10:00 p.m. favor de considerar que de acuerdo a la operación del hotel, este horario puede tener algunas variaciones, favor de preguntar al encargado.						
