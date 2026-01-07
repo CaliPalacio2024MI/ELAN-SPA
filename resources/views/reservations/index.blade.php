@@ -174,7 +174,12 @@
             <select class="form-select" name="grupo[__INDEX__][anfitrion_id]" required>
                 <option value="">Selecciona anfitrión/terapeuta</option>
                 @foreach ($anfitrionesDisponibles as $anfitrion)
-                    <option value="{{ $anfitrion->id }}">{{ $anfitrion->nombre_usuario }} {{ $anfitrion->apellido_paterno }}</option>
+                    @php
+                        $esSalon = $anfitrion->operativo->departamento === 'salon de belleza';
+                    @endphp
+                    <th class="{{ $esSalon ? 'encabezado-salon' : '' }}">
+                        {{ $anfitrion->nombre_usuario }} {{ $anfitrion->apellido_paterno }}
+                    </th>
                 @endforeach
             </select>
         </div>
