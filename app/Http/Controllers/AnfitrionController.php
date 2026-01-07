@@ -10,6 +10,8 @@ use Illuminate\Support\Facades\Log;
 use App\Models\Anfitrion;
 use App\Models\AnfitrionOperativo;
 use App\Models\HorarioAnfitrion;
+use App\Models\Departamento;
+use Illuminate\Validation\Rule;
 use App\Models\Experience;
 
 class AnfitrionController extends Controller
@@ -29,10 +31,38 @@ class AnfitrionController extends Controller
         }
 
         // Obtiene anfitriones del spa excepto rol master, con datos operativos cargados
-        $anfitriones = Anfitrion::where('spa_id', $spa->id)
+        $query = Anfitrion::where('spa_id', $spa->id)
             ->where('rol', '!=', 'master')
-            ->with('operativo')
-            ->get();
+            ->with('operativo');
+
+        // Filtrado por término de búsqueda (busca en RFC, nombre, apellidos, rol, departamento y categorias)
+        $search = trim($request->query('search', ''));
+        if ($search !== '') {
+            $query->where(function ($q) use ($search) {
+                // Campos directos en la tabla anfitriones
+                $q->where('RFC', 'like', "%{$search}%")
+                    ->orWhere('nombre_usuario', 'like', "%{$search}%")
+                    ->orWhere('apellido_paterno', 'like', "%{$search}%")
+                    ->orWhere('apellido_materno', 'like', "%{$search}%")
+                    ->orWhere('rol', 'like', "%{$search}%");
+
+                // Campos dentro de la relación operativo (departamento, clases_actividad JSON)
+                $q->orWhereHas('operativo', function ($oq) use ($search) {
+                    $oq->where('departamento', 'like', "%{$search}%")
+                       ->orWhere('clases_actividad', 'like', "%{$search}%");
+                });
+            });
+        }
+
+        // Filtrado opcional por departamento (ej. 'gym') usando la relación operativo
+        $departamento = trim($request->query('departamento', ''));
+        if ($departamento !== '') {
+            $query->whereHas('operativo', function ($q) use ($departamento) {
+                $q->where('departamento', $departamento);
+            });
+        }
+
+        $anfitriones = $query->get();
 
         // Carga nombres de spas adicionales accesibles para cada anfitrion
         foreach ($anfitriones as $anfitrion) {
@@ -76,12 +106,22 @@ class AnfitrionController extends Controller
             ->filter()
             ->values();
 
+        // Agrupa experiencias por su clase para poblar subtipos (p.ej. masajes, faciales, corporales)
+        $experienciasPorClase = Experience::where('spa_id', $spa->id)
+            ->get()
+            ->groupBy('clase')
+            ->map(function ($grupo) {
+                return $grupo->pluck('nombre')->unique()->values()->all();
+            })
+            ->toArray();
+
         return view('gestores.gestor_anfitriones', [
             'anfitriones' => $anfitriones,
             'spas' => Spa::all(),
             'spasDisponibles' => Spa::where('id', '!=', $spa->id)->get(),
             'todasClases' => $todasClases,
             'clasesDisponibles' => $clasesDisponibles,
+            'experienciasPorClase' => $experienciasPorClase,
         ]);
     }
 
@@ -95,7 +135,15 @@ class AnfitrionController extends Controller
             'nombre_usuario' => 'required|string|max:255',
             'password' => ['required', 'string', 'min:8', 'regex:/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/'],
             'rol' => 'required|string',
-            'departamento' => 'required|in:spa,gym,valet,salon de belleza',
+            // --- INICIO DE CAMBIO ---
+            // Validación dinámica de departamentos
+            'departamento' => [
+                'required',
+                Rule::in(
+                    Departamento::where('spa_id', session('current_spa_id'))->where('activo', true)->pluck('nombre')
+                )
+            ],
+            // --- FIN DE CAMBIO ---
             'accesos' => 'nullable|array',
             'accesos.*' => 'integer|exists:spas,id',
         ], [
@@ -160,7 +208,16 @@ class AnfitrionController extends Controller
             'nombre_usuario' => 'required|string|max:255',
             'password' => ['nullable', 'string', 'min:8', 'regex:/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/'],
             'rol' => 'required|string',
-            'departamento' => 'required|in:spa,gym,valet,salon de belleza',
+            // --- INICIO DE CAMBIO ---
+            // Validación dinámica de departamentos
+            'departamento' => [
+                'required',
+                Rule::in(
+                    // Usamos el spa_id del anfitrión que se está editando
+                    Departamento::where('spa_id', $anfitrion->spa_id)->where('activo', true)->pluck('nombre')
+                )
+            ],
+            // --- FIN DE CAMBIO ---
             'accesos' => 'nullable|array',
             'accesos.*' => 'integer|exists:spas,id',
             'activo' => 'boolean',
