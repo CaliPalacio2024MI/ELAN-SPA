@@ -12,6 +12,20 @@
     @endif
 
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
+    <style>
+        .context-menu {
+            position: absolute;
+            background-color: white;
+            border: 1px solid #ccc;
+            box-shadow: 2px 2px 5px rgba(0,0,0,0.2);
+            z-index: 1000;
+            padding: 5px 0;
+            list-style: none;
+            border-radius: 5px;
+        }
+        .context-menu li { padding: 8px 15px; cursor: pointer; }
+        .context-menu li:hover { background-color: #f0f0f0; }
+    </style>
 </head>
 <body>
 
@@ -59,12 +73,21 @@
     </button>
 
     <div class="settings-menu" id="settings-menu" hidden>
+        <form action="{{ route('unidades.create') }}" method="GET" style="margin: 0;">
+            <button type="submit" class="btn btn-danger">Crear unidad</button>
+        </form>
         <form action="{{ route('logout') }}" method="POST">
             @csrf
             <button type="submit" class="btn btn-danger">Cerrar sesión</button>
         </form>
     </div>
+    
+    
 </header>
+
+@if(session('success'))
+    <div class="alert alert-success m-3" role="alert">{{ session('success') }}</div>
+@endif
 
 <main class="content">
     <div class="button-container">
@@ -78,12 +101,40 @@
                 <img src="{{ asset('images/' . strtolower($spa->nombre) . '/Logo.png') }}" alt="{{ strtoupper($spa->nombre) }}" />
             </a>
         @endforeach
+        @php
+            use App\Models\Unidad;
+            $spaId = session('current_spa_id');
+            $unidades = $spaId ? Unidad::where('spa_id', $spaId)->orderBy('created_at', 'desc')->get() : Unidad::orderBy('created_at', 'desc')->get();
+        @endphp
+
+        @foreach ($unidades as $unidad)
+            <a href="javascript:void(0);"
+                 onclick="selectUnidad({{ $unidad->id }})"
+                 class="area-button unidad-item"
+                 data-unidad-id="{{ $unidad->id }}"
+                 data-unidad-nombre="{{ $unidad->nombre_unidad }}"
+                 title="{{ $unidad->nombre_unidad }}"
+                 style="background: transparent; display: flex; justify-content: center; align-items: center;"
+            >
+                @if($unidad->logo_unidad)
+                    <img src="{{ asset($unidad->logo_unidad) }}" alt="{{ $unidad->nombre_unidad }}" style="max-width: 90%; max-height: 90%; object-fit: contain;" />
+                @endif
+            </a>
+        @endforeach
     </div>
 </main>
 
 <div class="contenedor-imagen">
     <img src="{{ asset('images/LOGO_MI.png') }}" alt="Logo principal" />
 </div>
+
+<!-- Menú contextual para unidades -->
+<ul id="unidad-context-menu" class="context-menu" style="display:none;">
+    <li id="context-menu-edit">Editar</li>
+    <li id="context-menu-delete">Eliminar</li>
+</ul>
+
+@include('components.alert-modal')
 
 <script>
     function toggleMenu() {
@@ -122,6 +173,27 @@
         });
     }
 
+    function selectUnidad(unidadId, event) {
+        // Prevenir la redirección si se hizo clic derecho
+        if (event && event.button === 2) {
+            return;
+        }
+
+        fetch(`/set-unidad/${unidadId}`, {
+            method: 'POST',
+            headers: {
+                'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({})
+        }).then(response => {
+            if (response.ok) {
+                // Redirigir a la página de la nueva unidad
+                window.location.href = "{{ route('newunid.index') }}";
+            }
+        });
+    }
+
     function toggleSettingsMenu() {
         const menu = document.getElementById('settings-menu');
         if (!menu) return;
@@ -147,6 +219,77 @@
             menu.classList.remove('open');
         }
     });
+
+    
+    // --- Lógica para el menú contextual ---
+    document.addEventListener('DOMContentLoaded', function() {
+        const contextMenu = document.getElementById('unidad-context-menu');
+        const menuEdit = document.getElementById('context-menu-edit');
+        const menuDelete = document.getElementById('context-menu-delete');
+        let currentUnidadId = null;
+
+        document.querySelectorAll('.unidad-item').forEach(item => {
+            item.addEventListener('contextmenu', function(event) {
+                event.preventDefault();
+                currentUnidadId = this.dataset.unidadId;
+
+                contextMenu.style.top = `${event.pageY}px`;
+                contextMenu.style.left = `${event.pageX}px`;
+                contextMenu.style.display = 'block';
+            });
+        });
+
+        // Ocultar menú al hacer clic en cualquier otro lugar
+        document.addEventListener('click', function() {
+            contextMenu.style.display = 'none';
+        });
+
+        // Acción de editar (puedes expandir esto)
+        menuEdit.addEventListener('click', function() {
+            // Redirigir a la página de edición de la unidad
+            window.location.href = `/unidades/${currentUnidadId}/edit`; // O la ruta correcta que tengas definida, ej: /unidad/...
+        });
+
+        // Acción de eliminar
+        menuDelete.addEventListener('click', function() {
+            const unidadItem = document.querySelector(`.unidad-item[data-unidad-id='${currentUnidadId}']`);
+            const nombreUnidad = unidadItem.dataset.unidadNombre;
+
+            if (confirm(`¿Estás seguro de que quieres eliminar la unidad "${nombreUnidad}"?`)) {
+                eliminarUnidad(currentUnidadId);
+            }
+        });
+
+        async function eliminarUnidad(id) {
+            try {
+                const response = await fetch(`/unidades/${id}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                        'Accept': 'application/json'
+                    }
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    // Eliminar el elemento del DOM
+                    const unidadElement = document.querySelector(`.unidad-item[data-unidad-id='${id}']`);
+                    if (unidadElement) {
+                        unidadElement.remove();
+                    }
+                    // Mostrar alerta de éxito (opcional)
+                    alert(data.message);
+                } else {
+                    alert('Error: ' + (data.message || 'No se pudo eliminar la unidad.'));
+                }
+            } catch (error) {
+                console.error('Error al eliminar la unidad:', error);
+                alert('Ocurrió un error de red. Inténtalo de nuevo.');
+            }
+        }
+    });
+
 </script>
 
 </body>

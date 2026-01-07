@@ -1,3 +1,14 @@
+@php
+    $hotelNameFull = $hotelName;
+    $mapNames = [
+        'palacio' => 'Palacio Mundo Imperial',
+        'princess' => 'Princess Mundo Imperial',
+        'pierre' => 'Pierre Mundo Imperial'
+    ];
+    if (array_key_exists(strtolower($hotelName), $mapNames)) {
+        $hotelNameFull = $mapNames[strtolower($hotelName)];
+    }
+@endphp
 <!-- Paso 1: Selección de tipo de usuario -->
 <div class="step {{ isset($startActive) && $startActive ? 'active' : '' }}" id="step-selection">
     @if (isset($showBackToQR) && $showBackToQR)
@@ -38,16 +49,16 @@
     <form id="form-adult">
         <div class="aviso-legal">
             <strong>AVISO LEGAL:</strong><br>
-            A través de mi firma, expreso mi voluntad para deslindar a <span style="color: red;">Palacio Mundo
-                Imperial</span> (Organización Ideal, S. de R.L. de C.V.), sus accionistas, directivos, representantes y
+            A través de mi firma, expreso mi voluntad para deslindar a <span style="color: red;">{{ $hotelNameFull }}</span>
+                (Organización Ideal, S. de R.L. de C.V.), sus accionistas, directivos, representantes y
             empleados, a fin de que estén y se mantengan libres, sin carga y no tengan ninguna responsabilidad por
             cualquier lesión corporal, menoscabo o pérdida que resulte como consecuencia inmediata, mediata o remota de
             las rutinas que realice -sean o no con aparatos y/o equipos de entrenamiento-, por ende, asumo la
             responsabilidad de las rutinas que realizo y del uso correcto de los aparatos y equipos de entrenamiento.
             Renunciando a ejercer cualquier acción legal o judicial en contra de ellos por dicha situación.
             <br><br>
-            Through my signature, I express my will to delimit to <span style="color: red;">Palacio Mundo
-                Imperial</span> (Organización Ideal, S. de R.L. de C.V.), its shareholders, directors, representatives
+            Through my signature, I express my will to delimit to <span style="color: red;">{{ $hotelNameFull }}</span>
+                 (Organización Ideal, S. de R.L. de C.V.), its shareholders, directors, representatives
             and employees, so that they are and remain free, without charge and have no responsibility for any bodily
             injury, impairment or loss that results as an immediate, mediate or remote consequence of the routines that
             I carry out, whether or not it be with training devices and / or equipment. Therefore, I assume
@@ -59,6 +70,14 @@
             <label for="nombre_adulto">Nombre completo *</label>
             <input type="text" id="nombre_adulto" name="nombre_huesped" required>
         </div>
+
+        <div class="form-group">
+            <label for="numero_habitacion">Numero de Habitacion *</label>
+            <input type="text" id="numero_habitacion" name="numero_habitacion" required>
+        </div>
+
+        
+
 
         <div class="form-group">
             <label>Firma *</label>
@@ -86,11 +105,11 @@
         <div class="aviso-legal">
             <strong>AVISO LEGAL:</strong><br>
             Firmo de enterada(o) acerca de la restricción de acceso para menores de edad en el Gimnasio ubicado en
-            Palacio Mundo Imperial.
+            {{ $hotelNameFull }}.
             Me hago totalmente responsable de cualquier lesión o accidente que mi hijo pudiera sufrir, es de mi
             consentimiento que el uso del Gimnasio es solo para mayores de edad y aun sabiendo los riesgos que
             representa asumo las responsabilidades que el mal uso de los aparatos pudiera causar a mi hijo(a).
-            Absteniéndome de responsabilizar a Palacio Mundo Imperial y a ELAN Spa & Wellness Experience.
+            Absteniéndome de responsabilizar a {{ $hotelNameFull }} y a ELAN Spa & Wellness Experience.
         </div>
 
         <h3>Datos del Menor</h3>
@@ -119,6 +138,8 @@
             <label for="nombre_tutor">Nombre completo del padre/tutor *</label>
             <input type="text" id="nombre_tutor" name="nombre_tutor" required>
         </div>
+
+        
 
         <div class="form-group">
             <label for="telefono_tutor">Teléfono del padre/tutor *</label>

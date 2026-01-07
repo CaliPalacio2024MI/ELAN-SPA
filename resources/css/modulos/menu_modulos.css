@@ -1,17 +1,25 @@
 body {
+    /* Usar variables para valores reutilizables */
+    --header-height: 60px;
+    --sidebar-width: 250px;
+    --main-bg-color: #FFFFFF;
+    --primary-dark: #071829;
+    --primary-light: #FFFFFF;
+    --accent-color: #BC8A55;
+    --accent-color-hover: #D09D6A;
+
     margin: 0;
     font-family: 'Kumbh Sans', sans-serif;
-    background-color: #FFFFFF;
+    background-color: var(--main-bg-color);
 }
 
 .page-header {
     position: fixed;
     top: 0;
     left: 0;
-    right: 0;
-    height: 60px;
-    background-color: #ffffff;
-    color: #FFFFFF;
+    width: 100%;
+    height: var(--header-height);
+    background-color: var(--primary-light);
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -29,17 +37,16 @@ body {
 }
 
 .content {
-    margin-top: 80px;
+    margin-top: calc(var(--header-height) + 20px); /* Header height + padding */
     margin-left: 0;
-    width: 100%;
-    transition: margin-left 0.3s ease, width 0.3s ease;
+    transition: margin-left 0.3s ease;
 }
 
 .button-container {
     display: flex;
     justify-content: center;
     align-items: center;
-    height: calc(100vh - 60px);
+    height: calc(100vh - var(--header-height));
     gap: 30px;
     overflow: hidden;
     margin-top: -70px; 
@@ -47,10 +54,10 @@ body {
 
 .area-button {
     background-color: #071829;
+    color: var(--primary-light);
     border-radius: 12px;
     padding: 20px;
     border: none;
-    color: #FFFFFF;
     cursor: pointer;
     width: 15%;
     max-width: 300px; 
@@ -73,8 +80,7 @@ body {
 }
 
 .menu-wrapper.open ~ .content {
-    margin-left: 250px; 
-    width: calc(100% - 260px); 
+    margin-left: var(--sidebar-width); 
 }
 
 .contenedor-imagen {
@@ -107,7 +113,7 @@ body {
 
 .settings-menu {
     position: absolute;
-    top: 60px;  
+    top: var(--header-height);  
     left: 10px;
     background-color: #F7F4F2;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
@@ -123,10 +129,10 @@ body {
 }
 
 .settings-menu form button {
-    background-color: #BC8A55;
+    background-color: var(--accent-color);
     border: none;
     border-radius: 8px;
-    color: #FFFFFF;
+    color: var(--primary-light);
     padding: 10px 0;
     width: 90%;
     margin: 5px auto;
@@ -137,10 +143,38 @@ body {
 }
 
 .settings-menu form button:hover {
-    background-color: #D09D6A;
+    background-color: var(--accent-color-hover);
 }
 
 .menu-btn {
     border: none;
 }
 
+/* --- Estilos de Modal (Considerar mover a un archivo separado) --- */
+.unidad-modal-content {
+            background: white;
+            padding: 2rem;
+            border-radius: 0.5rem;
+            border: 1px solid #6f4e37; /* Borde color café */
+            width: 100%;
+            max-width: 600px;
+            margin: auto; /* Centrar el formulario en el contenedor */
+        }
+        .unidad-modal-content h5 {
+            color: #6f4e37; /* Título color café */
+        }
+        .form-control-color {
+            height: calc(1.5em + 0.75rem + 2px);
+        }
+        .unidad-item-preview {
+            width: 40px;
+            height: 40px;
+            border-radius: 0.25rem;
+        }
+        .spa-item-preview {
+            width: 80px;
+            height: 80px;
+            border-radius: 0.5rem;
+            border: 1px solid #ddd;
+            padding: 5px;
+        }

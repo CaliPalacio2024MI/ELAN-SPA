@@ -350,3 +350,15 @@ th, td {
     opacity: 0;
     transition: opacity 0.3s ease-out;
 }
+
+/* ====== FORMULARIO DE BÚSQUEDA ====== */
+.search-form {
+    width: 40%;
+    background-color: rgb(238, 238, 238);
+}
+
+.form-control:focus,
+.form-select:focus {
+    border-color: #a2a2a2;
+    box-shadow: 0 0 0 0.25rem rgba(255, 255, 255, 0.6);
+}

@@ -1,0 +1,22 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+
+class Unidad extends Model
+{
+    use HasFactory;
+
+    protected $table = 'unidades';
+
+    protected $fillable = [
+        'nombre_unidad',
+        'color_unidad',
+        'logo_unidad',
+        'logo_superior',
+        'logo_inferior',
+        'spa_id',
+    ];
+}

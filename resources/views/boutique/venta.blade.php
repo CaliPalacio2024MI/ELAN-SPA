@@ -1,15 +1,9 @@
 @extends('layouts.spa_menu')
 
-@section('logo_img')
-    @php
-        $spasFolder = session('current_spa') ?? strtolower(optional(Auth::user()->spa)->nombre);
-    @endphp
-    <img src="{{ asset("images/$spasFolder/logo.png") }}" alt="Logo de {{ ucfirst($spasFolder) }}">
-@endsection
-
 @section('css')
     @php
         $spaCss = session('current_spa') ?? strtolower(optional(Auth::user()->spa)->nombre);
+        if ($spaCss === 'newunid') $spaCss = 'palacio';
     @endphp
     @if (file_exists(public_path('build/manifest.json')) || file_exists(public_path('hot')))
         @vite('resources/css/menus/' . $spaCss . '/menu_styles.css')
@@ -20,14 +14,6 @@
         @vite('resources/css/componentes/modal.css')
     @endif
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-@endsection
-
-@section('decorativo')
-    @php
-        $spasFolder = session('current_spa') ?? strtolower(optional(Auth::user()->spa)->nombre);
-        $linDecorativa = asset("images/$spasFolder/decorativo.png");
-    @endphp
-    <div class="sidebar-decoration" style="background-image: url('{{ $linDecorativa }}');"></div>
 @endsection
 
 @section('content')
@@ -151,6 +137,9 @@
 @endsection
 
 @section('scripts')
+    {{-- SweetAlert para el prompt de contraseña --}}
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
     @vite('resources/js/autocomplete.js')
 
     <!-- Datos desde el controlador -->
@@ -222,7 +211,7 @@
         const botonAgregar = document.getElementById("agregar_producto");
         const tablaBody = document.querySelector("#tabla-ventas tbody");
 
-        botonAgregar.addEventListener("click", () => {
+        botonAgregar.addEventListener("click", async () => {
             const etiqueta = document.getElementById("numero_auxiliar").dataset.key;
             const etiquetaCompleta = etiqueta.toString().padStart(10, '0');
             const articulo = document.getElementById("nombre_producto").value;
@@ -242,6 +231,29 @@
                 MundoImperial.modalMensajeMostrar("modal-mensaje", "Campos incompletos",
                     "<p>Por favor, completa los campos antes de agregar.</p>");
                 return;
+            }
+
+            // --- INICIO: Verificación de contraseña para descuento ---
+            if (descuento > 0) {
+                const {
+                    value: password
+                } = await Swal.fire({
+                    title: 'Se requiere autorización',
+                    input: 'password',
+                    inputLabel: 'Ingresa la contraseña para aplicar el descuento',
+                    inputPlaceholder: 'Contraseña...',
+                    inputAttributes: {
+                        autocapitalize: 'off',
+                        autocorrect: 'off'
+                    }
+                });
+
+                if (password !== 'C4lid4d$') { // contraseña actual
+                    MundoImperial.modalMensajeMostrar("modal-mensaje", "Acceso denegado",
+                        "<p>La contraseña es incorrecta. No se aplicará el descuento.</p>");
+                    document.getElementById("descuento").value = ""; // Limpiar el campo de descuento
+                    return; // Detener la ejecución
+                }
             }
 
             // Crear nueva fila en la tabla
