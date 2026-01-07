@@ -55,12 +55,19 @@
             Nueva Cabina
         </button>
 
+        <form method="GET" action="{{ route('cabinas.index') }}" class="search-form d-flex mb-3">
+            <input type="text" name="search" value="{{ request('search') }}" class="form-control search-input" placeholder="Buscar cabina...">
+            <button type="submit" class="btn btn-buscar">
+                <i class="fas fa-search"></i>
+            </button>
+        </form>
+
         <table class="table-responsive custom-table">
             <thead>
                 <tr>
                     <th>Nombre</th>
-                    <th>tipo</th>
-                    <th>Categorias</th>
+                    <th>Tipo de cabinas</th>
+                    <th>Especialidades</th>
                     <th>Activo</th>
                     <th>Acciones</th>
                 </tr>
@@ -127,7 +134,7 @@
                         </div>
     
                         <div class="mb-3">
-                            <label for="clase" class="form-label">tipo</label>
+                            <label for="clase" class="form-label">Tipo de cabinas</label>
                             <input type="text" class="form-control {{ $errors->create->has('clase') ? 'is-invalid' : '' }}" id="clase" name="clase" value="{{ $fromEdit ? '' : old('clase') }}">
                             @error('clase', 'create')
                                 <div class="invalid-feedback">{{ $message }}</div>
@@ -135,16 +142,25 @@
                         </div>
     
                         <div class="mb-3">
-                            <label for="clases_actividad" class="form-label">Categoria</label>
-                            @foreach ($clasesDisponibles as $clase)
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox" name="clases_actividad[]" value="{{ $clase }}" id="clase_{{ $loop->index }}">
-                                <label class="form-check-label" for="clase_{{ $loop->index }}">
-                                    {{ $clase }}
-                                </label>
-                            </div>
-                        @endforeach
+                            <label class="form-label">Especialidades</label>
 
+                            @forelse (($experienciasPorClase ?? []) as $claseName => $tipos)
+                                @php $safeClassId = str_replace(' ', '_', strtolower($claseName)); @endphp
+                                <div class="form-check">
+                                    <input class="form-check-input main-cat" type="checkbox" value="{{ $claseName }}" id="cat_{{ $safeClassId }}" data-target="subtipo_{{ $safeClassId }}">
+                                    <label class="form-check-label" for="cat_{{ $safeClassId }}">{{ ucfirst($claseName) }}</label>
+                                </div>
+                                <div id="subtipo_{{ $safeClassId }}" class="ps-3 mt-2 subtipo-container" style="display:none;">
+                                    @foreach ($tipos as $idx => $tipo)
+                                        <div class="form-check">
+                                            <input class="form-check-input subtype-checkbox" type="checkbox" name="clases_actividad[]" value="{{ $tipo }}" id="{{ $safeClassId }}_tipo_{{ $idx }}">
+                                            <label class="form-check-label" for="{{ $safeClassId }}_tipo_{{ $idx }}">{{ $tipo }}</label>
+                                        </div>
+                                    @endforeach
+                                </div>
+                            @empty
+                                <p class="text-muted">No hay especialidades disponibles.</p>
+                            @endforelse
                         </div>
 
                         <div class="mb-3">
@@ -199,15 +215,25 @@
                         </div>
  
                         <div class="mb-3">
-                            <label for="edit_clases_actividad" class="form-label">Categorias</label>
-                            @foreach ($clasesDisponibles as $clase)
+                            <label class="form-label">Especialidades</label>
+
+                            @forelse (($experienciasPorClase ?? []) as $claseName => $tipos)
+                                @php $safeClassId = str_replace(' ', '_', strtolower($claseName)); @endphp
                                 <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" name="clases_actividad[]" value="{{ $clase }}" id="clase_{{ $loop->index }}">
-                                    <label class="form-check-label" for="clase_{{ $loop->index }}">
-                                        {{ $clase }}
-                                    </label>
+                                    <input class="form-check-input edit-main-cat" type="checkbox" value="{{ $claseName }}" id="edit_cat_{{ $safeClassId }}" data-target="edit_subtipo_{{ $safeClassId }}">
+                                    <label class="form-check-label" for="edit_cat_{{ $safeClassId }}">{{ ucfirst($claseName) }}</label>
                                 </div>
-                            @endforeach
+                                <div id="edit_subtipo_{{ $safeClassId }}" class="ps-3 mt-2 edit-subtipo-container" style="display:none;">
+                                    @foreach ($tipos as $idx => $tipo)
+                                        <div class="form-check">
+                                            <input class="form-check-input edit-subtype-checkbox" type="checkbox" name="clases_actividad[]" value="{{ $tipo }}" id="edit_{{ $safeClassId }}_tipo_{{ $idx }}">
+                                            <label class="form-check-label" for="edit_{{ $safeClassId }}_tipo_{{ $idx }}">{{ $tipo }}</label>
+                                        </div>
+                                    @endforeach
+                                </div>
+                            @empty
+                                <p class="text-muted">No hay especialidades disponibles.</p>
+                            @endforelse
                         </div>
                         
                         <div class="mb-3">
@@ -239,4 +265,140 @@
     @endif
     @include('components.session-alert')
 @endsection
+
+<script>
+    // Datos de experiencias agrupadas por clase (desde el controlador)
+    window.ExperienciasPorClase = @json($experienciasPorClase ?? []);
+    window.CabinaOldSelected = @json(old('clases_actividad', []));
+
+    function populateSubtypes(category, targetSelectId, selected = []) {
+        const select = document.getElementById(targetSelectId);
+        if (!select) return;
+        // Limpiar opciones
+        select.innerHTML = '';
+
+        if (!category || !window.ExperienciasPorClase[category]) return;
+
+        const tipos = window.ExperienciasPorClase[category];
+        tipos.forEach(function (tipo) {
+            const opt = document.createElement('option');
+            opt.value = tipo;
+            opt.text = tipo;
+            if (selected.includes(tipo)) opt.selected = true;
+            select.appendChild(opt);
+        });
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        const claseSelect = document.getElementById('clase_select');
+        const subtipoSelect = document.getElementById('subtipo_select');
+
+        // Manejo para checkboxes de categorías principales
+        const mainCats = document.querySelectorAll('.main-cat');
+        mainCats.forEach(function (chk) {
+            chk.addEventListener('change', function () {
+                const targetId = this.getAttribute('data-target');
+                const container = document.getElementById(targetId);
+                if (!container) return;
+                container.style.display = this.checked ? 'block' : 'none';
+            });
+        });
+
+        // Si existen subtipo-checkboxes marcar la categoría padre cuando se seleccionan
+        document.querySelectorAll('.subtipo-container .subtype-checkbox').forEach(function (sub) {
+            sub.addEventListener('change', function () {
+                // encontrar contenedor padre
+                const container = this.closest('.subtipo-container');
+                if (!container) return;
+                const id = container.id; // p.ej. subtipo_masajes
+                const catId = 'cat_' + id.replace('subtipo_', '');
+                const parent = document.getElementById(catId);
+                if (!parent) return;
+                // si al menos un checkbox en container está marcado, marcar parent
+                const anyChecked = Array.from(container.querySelectorAll('.subtype-checkbox')).some(c => c.checked);
+                parent.checked = anyChecked;
+            });
+        });
+
+        // Listeners para edit modal checkboxes (mismo comportamiento)
+        document.querySelectorAll('.edit-main-cat').forEach(function (chk) {
+            chk.addEventListener('change', function () {
+                const targetId = this.getAttribute('data-target');
+                const container = document.getElementById(targetId);
+                if (!container) return;
+                container.style.display = this.checked ? 'block' : 'none';
+            });
+        });
+
+        document.querySelectorAll('.edit-subtipo-container .edit-subtype-checkbox').forEach(function (sub) {
+            sub.addEventListener('change', function () {
+                const container = this.closest('.edit-subtipo-container');
+                if (!container) return;
+                const id = container.id;
+                const catId = 'edit_cat_' + id.replace('edit_subtipo_', '');
+                const parent = document.getElementById(catId);
+                if (!parent) return;
+                const anyChecked = Array.from(container.querySelectorAll('.edit-subtype-checkbox')).some(c => c.checked);
+                parent.checked = anyChecked;
+            });
+        });
+
+        // Si vienen valores old (por validación fallida), preseleccionar en creación
+        if (Array.isArray(window.CabinaOldSelected) && window.CabinaOldSelected.length) {
+            window.CabinaOldSelected.forEach(function (val) {
+                const chk = Array.from(document.querySelectorAll('.subtype-checkbox')).find(c => c.value === val);
+                if (chk) {
+                    chk.checked = true;
+                    const container = chk.closest('.subtipo-container');
+                    if (container) container.style.display = 'block';
+                    const parentId = 'cat_' + (container?.id.replace('subtipo_', '') || '');
+                    const parent = document.getElementById(parentId);
+                    if (parent) parent.checked = true;
+                }
+            });
+        }
+
+        // Edit modal: cuando se abre, preseleccionar checkboxes y mostrar contenedores
+        const editModal = document.getElementById('editCabinaModal');
+        if (editModal) {
+            editModal.addEventListener('show.bs.modal', function (event) {
+                const button = event.relatedTarget;
+                if (!button) return;
+                const id = button.getAttribute('data-id');
+                let clasesActividad = [];
+                try {
+                    clasesActividad = JSON.parse(button.getAttribute('data-clases-actividad') || '[]');
+                } catch (e) { clasesActividad = []; }
+
+                const editNombre = document.getElementById('edit_nombre_cabina');
+                const editForm = document.getElementById('editCabinaForm');
+
+                if (editNombre) editNombre.value = button.getAttribute('data-nombre') || '';
+                if (editForm) editForm.action = '/cabinas/' + id;
+
+                // Limpiar selección previa
+                document.querySelectorAll('.edit-subtype-checkbox').forEach(ch => ch.checked = false);
+                document.querySelectorAll('.edit-subtipo-container').forEach(c => c.style.display = 'none');
+                document.querySelectorAll('.edit-main-cat').forEach(c => c.checked = false);
+
+                // Marcar checkboxes que coincidan con clasesActividad
+                clasesActividad.forEach(function (val) {
+                    const checkbox = Array.from(document.querySelectorAll('.edit-subtype-checkbox')).find(ch => ch.value === val);
+                    if (checkbox) checkbox.checked = true;
+                });
+
+                // Mostrar contenedores y marcar padres según lo seleccionado
+                document.querySelectorAll('.edit-subtipo-container').forEach(function (container) {
+                    const anyChecked = Array.from(container.querySelectorAll('.edit-subtype-checkbox')).some(c => c.checked);
+                    if (anyChecked) {
+                        container.style.display = 'block';
+                        const catId = 'edit_cat_' + container.id.replace('edit_subtipo_', '');
+                        const parent = document.getElementById(catId);
+                        if (parent) parent.checked = true;
+                    }
+                });
+            });
+        }
+    });
+</script>
 

@@ -81,9 +81,23 @@ class ClientController extends Controller
     }
 
     // Exporta clientes en formato Excel simple (HTML table)
-    public function export()
+    public function export(Request $request)
     {
-        $clientes = Client::all();
+        $query = Client::query();
+
+        if ($request->filled('search')) {
+            $search = $request->input('search');
+            $query->where(function ($q) use ($search) {
+                $q->where('nombre', 'like', "%$search%")
+                  ->orWhere('apellido_paterno', 'like', "%$search%")
+                  ->orWhere('apellido_materno', 'like', "%$search%")
+                  ->orWhere('correo', 'like', "%$search%")
+                  ->orWhere('telefono', 'like', "%$search%")
+                  ->orWhere('tipo_visita', 'like', "%$search%");
+            });
+        }
+
+        $clientes = $query->orderBy('nombre')->get();
 
         $filename = "clientes_" . now()->format('Ymd_His') . ".xls";
 

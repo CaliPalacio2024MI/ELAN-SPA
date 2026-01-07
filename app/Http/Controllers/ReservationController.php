@@ -150,8 +150,9 @@ class ReservationController extends Controller
 
         $horaInicio = $validated['hora'];
         $duracionMin = $experiencia->duracion;
+        $breakTime = config('finance.reservations.therapist_break_time', 10);
         $horaFin = date('H:i', strtotime("$horaInicio +{$duracionMin} minutes"));
-        $horaFinDescanso = date('H:i', strtotime("$horaFin +10 minutes"));
+        $horaFinDescanso = date('H:i', strtotime("$horaFin +{$breakTime} minutes"));
 
         if ($horaFinDescanso > '21:00') {
             return $this->jsonOrRedirectError($request, 'No hay tiempo suficiente para completar esta experiencia antes del cierre.');
@@ -227,13 +228,72 @@ class ReservationController extends Controller
     // Datos para editar reservación (rellenar formulario)
     public function edit($id)
     {
-        $reservation = Reservation::with(['cliente', 'experiencia', 'anfitrion', 'cabina'])->find($id);
+        $reservation = Reservation::with(['cliente', 'experiencia', 'anfitrion.horario', 'cabina'])->find($id);
 
         if (!$reservation) {
             return response()->json(['error' => 'Reservación no encontrada'], 404);
         }
 
         $cliente = $reservation->cliente;
+
+        $anfitrionesDisponibles = Anfitrion::where('spa_id', $reservation->spa_id)->where('activo', true)->get();
+        
+        $horariosDisponibles = [];
+        if ($reservation->anfitrion) {
+            $anfitrion = $reservation->anfitrion;
+            $fecha = $reservation->fecha;
+            
+            // 1. Obtener horario base
+            $horariosBase = [];
+            if ($anfitrion->horario) {
+                $diaSemana = strtolower(\Carbon\Carbon::parse($fecha)->locale('es')->isoFormat('dddd'));
+                $diaSemana = str_replace(['á', 'é', 'í', 'ó', 'ú'], ['a', 'e', 'i', 'o', 'u'], $diaSemana);
+                $horariosRaw = $anfitrion->horario->horarios ?? [];
+                $normalizados = [];
+                foreach ($horariosRaw as $dia => $horas) {
+                    $diaSinTilde = strtolower(strtr($dia, ['á'=>'a','é'=>'e','í'=>'i','ó'=>'o','ú'=>'u']));
+                    $normalizados[$diaSinTilde] = is_array($horas) ? $horas : [];
+                }
+                if (isset($normalizados[$diaSemana]) && is_array($normalizados[$diaSemana])) {
+                    $horariosBase = array_map(fn($h) => \Carbon\Carbon::parse(trim($h))->format('H:i'), $normalizados[$diaSemana]);
+                    sort($horariosBase);
+                }
+            }
+
+            if (!empty($horariosBase)) {
+                // 2. Obtener intervalos ocupados
+                $busyIntervals = $this->getBusyIntervalsForHost($anfitrion->id, $fecha, $id);
+                $breakTime = config('finance.reservations.therapist_break_time', 10);
+
+                // 3. Filtrar horarios
+                $experienceDuration = $reservation->experiencia->duracion ?? 0;
+                foreach ($horariosBase as $hora) {
+                    $slotStart = \Carbon\Carbon::parse($fecha . ' ' . $hora);
+                    $isAvailable = true;
+                    
+                    if ($experienceDuration > 0) {
+                        $slotEnd = $slotStart->copy()->addMinutes($experienceDuration + $breakTime);
+                        foreach ($busyIntervals as $busy) {
+                            if ($slotStart < $busy['end'] && $slotEnd > $busy['start']) {
+                                $isAvailable = false;
+                                break;
+                            }
+                        }
+                    } else {
+                        foreach ($busyIntervals as $busy) {
+                            if ($slotStart >= $busy['start'] && $slotStart < $busy['end']) {
+                                $isAvailable = false;
+                                break;
+                            }
+                        }
+                    }
+
+                    if ($isAvailable) {
+                        $horariosDisponibles[] = $hora;
+                    }
+                }
+            }
+        }
 
         return response()->json([
             'id' => $reservation->id,
@@ -253,12 +313,26 @@ class ReservationController extends Controller
             'apellido_materno_cliente' => $cliente->apellido_materno ?? '',
             'telefono_cliente' => $cliente->telefono ?? '',
             'tipo_visita_cliente' => $cliente->tipo_visita ?? '',
+
+            'anfitriones' => $anfitrionesDisponibles->map(function($anfitrion) {
+                return [
+                    'id' => $anfitrion->id,
+                    'nombre' => $anfitrion->nombre_usuario
+                ];
+            })->values(),
+            'horarios_disponibles' => $horariosDisponibles
         ]);
     }
+
 
     // Actualizar reservación
     public function update(Request $request, $id)
     {
+        // Si la actualización proviene de un drag-and-drop, usar el manejador específico.
+        if ($request->has('from_drag')) {
+            return $this->handleDragAndDropUpdate($request, $id);
+        }
+
         Log::info("Solicitud para actualizar reservación ID $id", $request->all());
 
         $reservation = Reservation::findOrFail($id);
@@ -306,9 +380,16 @@ class ReservationController extends Controller
         // Calcular horas para validaciones
         $experiencia = Experience::find($validated['experiencia_id']);
         $duracionMin = $experiencia->duracion ?? 0;
+        
+        $newAnfitrion = Anfitrion::with('operativo')->find($validated['anfitrion_id']);
+        $breakTime = 0;
+        if ($newAnfitrion && $newAnfitrion->operativo && $newAnfitrion->operativo->departamento === 'spa') {
+            $breakTime = config('finance.reservations.therapist_break_time', 10);
+        }
+
         $horaInicio = $validated['hora'];
         $horaFin = date('H:i', strtotime("$horaInicio +{$duracionMin} minutes"));
-        $horaFinDescanso = date('H:i', strtotime("$horaFin +10 minutes"));
+        $horaFinDescanso = date('H:i', strtotime("$horaFin +{$breakTime} minutes"));
 
         // Validar conflictos de horarios para cliente
         $clienteOcupado = Reservation::where('cliente_id', $validated['cliente_id'])
@@ -349,17 +430,7 @@ class ReservationController extends Controller
         }
 
         // Validar conflictos de horarios para anfitrión (incluye descanso)
-        $anfitrionOcupado = Reservation::where('anfitrion_id', $validated['anfitrion_id'])
-            ->where('fecha', $validated['fecha'])
-            ->where('id', '!=', $reservation->id)
-            ->where('estado', 'activa')
-            ->where(function ($q) use ($horaInicio, $horaFinDescanso) {
-                $q->whereBetween('hora', [$horaInicio, $horaFinDescanso])
-                  ->orWhereRaw("? BETWEEN hora AND ADDTIME(hora, SEC_TO_TIME((SELECT duracion FROM experiences WHERE id = experiencia_id) * 60 + 600))", [$horaInicio])
-                  ->orWhereRaw("? BETWEEN hora AND ADDTIME(hora, SEC_TO_TIME((SELECT duracion FROM experiences WHERE id = experiencia_id) * 60 + 600))", [$horaFinDescanso]);
-            })->exists();
-
-        if ($anfitrionOcupado) {
+        if ($this->hayConflictoAnfitrion($validated, $horaInicio, $horaFinDescanso, $spaId, $id)) {
             return response()->json(['error' => 'El anfitrión ya tiene otra reservación en este horario.'], 422);
         }
 
@@ -378,6 +449,130 @@ class ReservationController extends Controller
         Log::info("Reservación ID $id actualizada correctamente.");
 
         return response()->json(['success' => true, 'message' => 'Reservación actualizada correctamente.']);
+    }
+
+    /**
+     * Maneja la actualización de una reservación a través de drag-and-drop.
+     */
+    private function handleDragAndDropUpdate(Request $request, $id)
+    {
+        $reservation = Reservation::findOrFail($id);
+
+        // VALIDACIÓN: El anfitrión debe tener la especialidad (clase) requerida por la experiencia.
+        $newAnfitrion = Anfitrion::with('operativo')->find($request->input('anfitrion_id'));
+        $experience = $reservation->experiencia;
+        
+        // Función para normalizar strings (minúsculas, sin tildes, sin espacios extra)
+        $normalize = function ($str) {
+            if (!$str) return '';
+            $str = mb_strtolower($str, 'UTF-8');
+            $str = str_replace(
+                ['á', 'é', 'í', 'ó', 'ú', 'ñ'],
+                ['a', 'e', 'i', 'o', 'u', 'n'],
+                $str
+            );
+            return trim($str);
+        };
+
+        $requiredName = $normalize($experience->nombre);
+        $requiredClass = $normalize($experience->clase);
+        
+        $anfitrionClasses = $newAnfitrion->operativo->clases_actividad ?? [];
+        $normalizedAnfitrionClasses = array_map($normalize, $anfitrionClasses);
+
+        $isQualified = in_array($requiredClass, $normalizedAnfitrionClasses) || in_array($requiredName, $normalizedAnfitrionClasses);
+
+        // --- DEBUGGING ---
+        Log::debug('--- Calificación de Anfitrión D&D (Lógica flexible) ---');
+        Log::debug("Reservación ID: {$id}");
+        Log::debug("Anfitrión a verificar ID: {$newAnfitrion->id}");
+        Log::debug("Clase requerida (normalizada): '{$requiredClass}'");
+        Log::debug("Nombre requerido (normalizado): '{$requiredName}'");
+        Log::debug("Clases del anfitrión (normalizadas): " . implode(', ', $normalizedAnfitrionClasses));
+        Log::debug("Resultado de calificación: " . ($isQualified ? 'CALIFICADO' : 'NO CALIFICADO'));
+        // --- FIN DEBUGGING ---
+
+        if (!$isQualified) {
+            Log::warning("VALIDACIÓN FALLIDA: Anfitrión no posee la clase '{$requiredClass}' ni el nombre '{$requiredName}'.");
+            return response()->json([
+                'error' => 'El anfitrión no está calificado para realizar esta experiencia.'
+            ], 422);
+        }
+
+        // No se pueden mover reservaciones con check-in.
+        if ($reservation->check_in) {
+            return response()->json(['error' => 'No se puede mover una reservación con check-in realizado.'], 422);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'anfitrion_id' => 'required|exists:anfitriones,id',
+            'hora' => 'required|date_format:H:i',
+            'fecha' => 'required|date',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['errors' => $validator->errors(), 'message' => 'Datos inválidos.'], 422);
+        }
+
+        $validated = $validator->validated();
+        $spaId = $reservation->spa_id;
+
+        // Datos necesarios para validaciones de conflicto
+        $dataForConflictCheck = [
+            'anfitrion_id' => $validated['anfitrion_id'],
+            'cabina_id' => $reservation->cabina_id, // La cabina no cambia
+            'fecha' => $validated['fecha'],
+            'hora' => $validated['hora'],
+            'id' => $reservation->id, // Para excluirse a sí misma en la validación
+        ];
+
+        // Calcular horas para validaciones
+        $duracionMin = $reservation->experiencia->duracion;
+        $breakTime = config('finance.reservations.therapist_break_time', 10);
+        $horaInicio = $validated['hora'];
+        $horaFin = date('H:i', strtotime("$horaInicio +{$duracionMin} minutes"));
+        $horaFinDescanso = date('H:i', strtotime("$horaFin +{$breakTime} minutes"));
+
+        // Reutilizar funciones de validación de conflictos, excluyendo la reserva actual
+        if ($this->hayConflictoAnfitrion($dataForConflictCheck, $horaInicio, $horaFinDescanso, $spaId, $reservation->id)) {
+            return response()->json(['error' => 'El anfitrión ya tiene una reservación o descanso en este nuevo horario.'], 422);
+        }
+
+        if ($this->hayConflictoCabina($dataForConflictCheck, $horaInicio, $horaFin, $reservation->id)) {
+            return response()->json(['error' => 'La cabina está ocupada en este nuevo horario.'], 422);
+        }
+
+        // Actualizar la reservación con los nuevos datos
+        $reservation->update([
+            'anfitrion_id' => $validated['anfitrion_id'],
+            'hora' => $validated['hora'],
+            'fecha' => $validated['fecha'],
+        ]);
+
+        Log::info("Reservación ID $id movida a las {$validated['hora']} con anfitrión {$validated['anfitrion_id']}.");
+
+        // Cargar relaciones para devolver datos completos
+        $reservation->load(['cliente', 'experiencia', 'anfitrion', 'cabina']);
+
+        $cliente = $reservation->cliente;
+        $nombreCliente = trim("{$cliente->nombre} {$cliente->apellido_paterno} {$cliente->apellido_materno}");
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Reservación movida correctamente.',
+            'reservation' => [
+                'id' => $reservation->id,
+                'cliente_nombre' => $nombreCliente,
+                'experiencia_nombre' => $reservation->experiencia->nombre ?? 'N/D',
+                'anfitrion_nombre' => $reservation->anfitrion->nombre_usuario ?? 'N/D',
+                'hora' => substr($reservation->hora, 0, 5),
+                'duracion' => $reservation->experiencia->duracion,
+                'anfitrion_id' => $reservation->anfitrion_id,
+                'check_in' => $reservation->check_in,
+                'check_out' => $reservation->check_out,
+                'clase_experiencia' => $reservation->experiencia->clase,
+            ]
+        ]);
     }
 
     // Cancelar (no eliminar) reservación
@@ -477,8 +672,9 @@ class ReservationController extends Controller
             }
 
             $data['duracion'] = $exp->duracion;
+            $breakTime = config('finance.reservations.therapist_break_time', 10);
             $data['hora_fin'] = date('H:i', strtotime("{$data['hora']} +{$exp->duracion} minutes"));
-            $data['hora_fin_descanso'] = date('H:i', strtotime("{$data['hora_fin']} +10 minutes"));
+            $data['hora_fin_descanso'] = date('H:i', strtotime("{$data['hora_fin']} +{$breakTime} minutes"));
             $data['spa_id'] = $spa->id;
 
             // Obtener y normalizar horario del anfitrión
@@ -496,14 +692,16 @@ class ReservationController extends Controller
             $dia = strtolower(\Carbon\Carbon::parse($data['fecha'])->isoFormat('dddd'));
             $dia = str_replace(['á','é','í','ó','ú'], ['a','e','i','o','u'], $dia);
 
-            $horaSolicitada = $data['hora'];
+            $horaSolicitada = \Carbon\Carbon::parse($data['hora'])->format('H:i');
 
             // Validar disponibilidad exacta del horario del anfitrión
             $horasDia = array_map('trim', (array) ($horario[$dia] ?? []));
-            $horaSolicitadaNormalizada = trim($horaSolicitada);
+            
+            // Normalizar las horas del horario a formato H:i
+            $horasDiaNormalizadas = array_map(fn($h) => \Carbon\Carbon::parse($h)->format('H:i'), $horasDia);
 
-            if (!in_array($horaSolicitadaNormalizada, $horasDia)) {
-                $errores["Reserva #$index"][] = "El anfitrión no tiene horario disponible a las {$horaSolicitada} el día {$dia}.";
+            if (!in_array($horaSolicitada, $horasDiaNormalizadas)) {
+                $errores["Reserva #$index"][] = "El anfitrión no tiene un horario de inicio disponible a las {$horaSolicitada} el día {$dia}. Horarios disponibles: " . implode(', ', $horasDia);
                 continue;
             }
 
@@ -513,7 +711,8 @@ class ReservationController extends Controller
         // Validaciones cruzadas y conflictos
         foreach ($reservasValidas as $r) {
             $inicio = strtotime($r['hora']);
-            $fin = strtotime($r['hora_fin_descanso']);
+            $finAnfitrion = strtotime($r['hora_fin_descanso']);
+            $finCabina = strtotime($r['hora_fin']);
 
             $bloqueos = BlockedSlot::where([
                 ['spa_id', $spa->id],
@@ -525,12 +724,12 @@ class ReservationController extends Controller
                 $bInicio = strtotime($bloqueo->hora);
                 $bFin = strtotime("{$bloqueo->hora} +{$bloqueo->duracion} minutes");
 
-                if ($inicio < $bFin && $bInicio < $fin) {
+                if ($inicio < $bFin && $bInicio < $finAnfitrion) {
                     $errores["Reserva #{$r['index']}"][] = 'El anfitrión tiene un bloqueo en ese horario.';
                 }
             }
 
-            if ($this->hayConflictoCabina($r, $r['hora'], $r['hora_fin_descanso'])) {
+            if ($this->hayConflictoCabina($r, $r['hora'], $r['hora_fin'])) {
                 $errores["Reserva #{$r['index']}"][] = 'La cabina ya está ocupada.';
             }
 
@@ -543,13 +742,14 @@ class ReservationController extends Controller
                 if ($r['index'] === $o['index'] || $r['fecha'] !== $o['fecha']) continue;
 
                 $oInicio = strtotime($o['hora']);
-                $oFin = strtotime($o['hora_fin_descanso']);
+                $oFinAnfitrion = strtotime($o['hora_fin_descanso']);
+                $oFinCabina = strtotime($o['hora_fin']);
 
-                if ($r['cabina_id'] === $o['cabina_id'] && $inicio < $oFin && $oInicio < $fin) {
+                if ($r['cabina_id'] === $o['cabina_id'] && $inicio < $oFinCabina && $oInicio < $finCabina) {
                     $errores["Reserva #{$r['index']}"][] = "Conflicto interno de cabina con reserva #{$o['index']}.";
                 }
 
-                if ($r['anfitrion_id'] === $o['anfitrion_id'] && $inicio < $oFin && $oInicio < $fin) {
+                if ($r['anfitrion_id'] === $o['anfitrion_id'] && $inicio < $oFinAnfitrion && $oInicio < $finAnfitrion) {
                     $errores["Reserva #{$r['index']}"][] = "Conflicto interno de anfitrión con reserva #{$o['index']}.";
                 }
             }
@@ -679,28 +879,105 @@ class ReservationController extends Controller
             })->exists();
     }
 
-    private function hayConflictoAnfitrion($data, $horaInicio, $horaFinDescanso, $spaId)
+    private function getBusyIntervalsForHost($anfitrionId, $fecha, $excludeReservationId = null)
     {
-        return Reservation::where('anfitrion_id', $data['anfitrion_id'])
-            ->where('fecha', $data['fecha'])
-            ->where('estado', 'activa')
-            ->where(function ($q) use ($horaInicio, $horaFinDescanso) {
-                $q->whereBetween('hora', [$horaInicio, $horaFinDescanso])
-                  ->orWhereRaw("? BETWEEN hora AND ADDTIME(hora, SEC_TO_TIME((SELECT duracion FROM experiences WHERE id = experiencia_id) * 60 + 600))", [$horaInicio])
-                  ->orWhereRaw("? BETWEEN hora AND ADDTIME(hora, SEC_TO_TIME((SELECT duracion FROM experiences WHERE id = experiencia_id) * 60 + 600))", [$horaFinDescanso]);
-            })->exists();
+        $query = Reservation::with(['experiencia', 'anfitrion.operativo'])
+            ->where('anfitrion_id', $anfitrionId)
+            ->where('fecha', $fecha)
+            ->where('estado', 'activa');
+
+        if ($excludeReservationId) {
+            $query->where('id', '!=', $excludeReservationId);
+        }
+        $reservations = $query->get();
+
+        $blockedSlots = BlockedSlot::where('anfitrion_id', $anfitrionId)
+            ->where('fecha', $fecha)
+            ->get();
+
+        $defaultBreakTime = config('finance.reservations.therapist_break_time', 10);
+        $busyIntervals = [];
+
+        foreach ($reservations as $res) {
+            if (empty($res->hora) || !$res->experiencia) continue;
+
+            $breakTime = 0;
+            if ($res->anfitrion && $res->anfitrion->operativo && $res->anfitrion->operativo->departamento === 'spa') {
+                $breakTime = $defaultBreakTime;
+            }
+
+            $start = \Carbon\Carbon::parse($fecha . ' ' . $res->hora);
+            $duration = $res->experiencia->duracion;
+            $end = $start->copy()->addMinutes($duration + $breakTime);
+            $busyIntervals[] = [
+                'start' => $start, 
+                'end' => $end,
+                'type' => 'reservation',
+                'id' => $res->id,
+            ];
+        }
+
+        foreach ($blockedSlots as $block) {
+            if (empty($block->hora)) continue;
+            $start = \Carbon\Carbon::parse($fecha . ' ' . $block->hora);
+            $duration = $block->duracion;
+            $end = $start->copy()->addMinutes($duration);
+            $busyIntervals[] = [
+                'start' => $start, 
+                'end' => $end,
+                'type' => 'blocked_slot',
+                'id' => $block->id,
+            ];
+        }
+
+        return $busyIntervals;
     }
 
-    private function hayConflictoCabina($data, $horaInicio, $horaFin)
+    private function hayConflictoAnfitrion($data, $horaInicio, $horaFinDescanso, $spaId, $excludeReservationId = null)
     {
-        return Reservation::where('cabina_id', $data['cabina_id'])
+        $busyIntervals = $this->getBusyIntervalsForHost($data['anfitrion_id'], $data['fecha'], $excludeReservationId);
+
+        $newSlotStart = \Carbon\Carbon::parse($data['fecha'] . ' ' . $horaInicio);
+        $newSlotEnd = \Carbon\Carbon::parse($data['fecha'] . ' ' . $horaFinDescanso);
+        
+        if ($newSlotEnd <= $newSlotStart) {
+            $newSlotEnd->addDay();
+        }
+
+        foreach ($busyIntervals as $busy) {
+            if ($newSlotStart < $busy['end'] && $newSlotEnd > $busy['start']) {
+                // --- NEW LOGGING ---
+                Log::warning('--- CONFLICTO DE ANFITRIÓN DETECTADO ---');
+                Log::warning("Anfitrión ID: {$data['anfitrion_id']}");
+                Log::warning("Horario solicitado: {$newSlotStart->toDateTimeString()} - {$newSlotEnd->toDateTimeString()}");
+                Log::warning("Conflicto con intervalo: {$busy['start']->toDateTimeString()} - {$busy['end']->toDateTimeString()}");
+                if (isset($busy['type'])) {
+                    Log::warning("Tipo de conflicto: {$busy['type']} (ID: {$busy['id']})");
+                }
+                // --- FIN LOGGING ---
+                return true; // Conflict found
+            }
+        }
+
+        return false; // No conflicts
+    }
+
+    private function hayConflictoCabina($data, $horaInicio, $horaFin, $excludeReservationId = null)
+    {
+        $query = Reservation::where('cabina_id', $data['cabina_id'])
             ->where('fecha', $data['fecha'])
             ->where('estado', 'activa')
             ->where(function ($q) use ($horaInicio, $horaFin) {
                 $q->whereBetween('hora', [$horaInicio, $horaFin])
                   ->orWhereRaw("? BETWEEN hora AND ADDTIME(hora, SEC_TO_TIME((SELECT duracion FROM experiences WHERE id = experiencia_id) * 60))", [$horaInicio])
                   ->orWhereRaw("? BETWEEN hora AND ADDTIME(hora, SEC_TO_TIME((SELECT duracion FROM experiences WHERE id = experiencia_id) * 60))", [$horaFin]);
-            })->exists();
+            });
+
+        if ($excludeReservationId) {
+            $query->where('id', '!=', $excludeReservationId);
+        }
+
+        return $query->exists();
     }
 
     private function cabinaPerteneceAlSpa($cabinaId, $spaId)
@@ -708,20 +985,155 @@ class ReservationController extends Controller
         return Cabina::where('id', $cabinaId)->where('spa_id', $spaId)->exists();
     }
         
-    public function historial()
+    public function historial(Request $request)
     {
-        $spaId = 1;
+        $spa = Spa::where('nombre', session('current_spa'))->first();
+        if (!$spa) {
+            return back()->withErrors(['spa' => 'No se encontró el spa actual en sesión.']);
+        }
 
-        $reservaciones = \App\Models\Reservation::with(['cliente', 'experiencia', 'cabina', 'anfitrion'])
-            ->where('spa_id', $spaId)
-            ->where('estado', 'activa')           
-            ->whereNotNull('check_out')
-            ->orderByDesc('fecha')
-            ->get();
+        $query = Reservation::with(['cliente', 'experiencia', 'cabina', 'anfitrion'])
+            ->where('spa_id', $spa->id);
+
+        // Filtrar por rango de fechas
+        if ($request->filled('desde')) {
+            $query->whereDate('fecha', '>=', $request->input('desde'));
+        }
+
+        if ($request->filled('hasta')) {
+            $query->whereDate('fecha', '<=', $request->input('hasta'));
+        }
+
+        // Filtro general (Buscador unificado)
+        if ($request->filled('busqueda')) {
+            $search = trim($request->input('busqueda'));
+            $query->where(function($q) use ($search) {
+                $q->whereHas('cliente', function ($q2) use ($search) {
+                    $q2->where('nombre', 'like', "%{$search}%")
+                      ->orWhere('apellido_paterno', 'like', "%{$search}%")
+                      ->orWhere('apellido_materno', 'like', "%{$search}%");
+                })
+                ->orWhereHas('experiencia', function ($q2) use ($search) {
+                    $q2->where('nombre', 'like', "%{$search}%");
+                })
+                ->orWhereHas('cabina', function ($q2) use ($search) {
+                    $q2->where('nombre', 'like', "%{$search}%");
+                })
+                ->orWhereHas('anfitrion', function ($q2) use ($search) {
+                    $q2->where('nombre_usuario', 'like', "%{$search}%");
+                });
+            });
+        }
+
+        // Estado de pago — normalizar y aplicar si el parámetro existe y no está vacío
+        $pagado = $request->input('pagado');
+        if (!is_null($pagado) && trim($pagado) !== '') {
+            $pagado = strtolower(trim($pagado));
+            if ($pagado === 'pagado') {
+                $query->where('check_out', true);
+            } elseif ($pagado === 'pendiente') {
+                $query->where('check_out', false);
+            }
+        }
+
+        $reservaciones = $query->orderByDesc('fecha')->orderBy('hora')->get();
 
         return view('reservations.historial.historial', compact('reservaciones'));
     }
 
+    public function getHorariosAnfitrion(Anfitrion $anfitrion, $fecha, Request $request)
+    {
+        // 1. Obtener los horarios base del anfitrión
+        $horariosBase = [];
+        if ($anfitrion->horario) {
+            $diaSemana = strtolower(\Carbon\Carbon::parse($fecha)->locale('es')->isoFormat('dddd'));
+            $diaSemana = str_replace(['á', 'é', 'í', 'ó', 'ú'], ['a', 'e', 'i', 'o', 'u'], $diaSemana);
+            $horariosRaw = $anfitrion->horario->horarios ?? [];
+            $normalizados = [];
+            foreach ($horariosRaw as $dia => $horas) {
+                $diaSinTilde = strtolower(strtr($dia, ['á'=>'a','é'=>'e','í'=>'i','ó'=>'o','ú'=>'u']));
+                $normalizados[$diaSinTilde] = is_array($horas) ? $horas : [];
+            }
+            if (isset($normalizados[$diaSemana]) && is_array($normalizados[$diaSemana])) {
+                $horariosBase = array_map(fn($h) => \Carbon\Carbon::parse(trim($h))->format('H:i'), $normalizados[$diaSemana]);
+                sort($horariosBase);
+            }
+        }
 
+        if (empty($horariosBase)) return response()->json([]);
+
+        // 2. Obtener reservaciones y bloqueos para crear intervalos ocupados
+        $excludeReservationId = $request->query('reservation_id');
+        $busyIntervals = $this->getBusyIntervalsForHost($anfitrion->id, $fecha, $excludeReservationId);
+        $breakTime = config('finance.reservations.therapist_break_time', 10);
+
+        // 3. Filtrar horarios
+        $experienceDuration = 0;
+        if ($request->has('experience_id')) {
+            $experience = Experience::find($request->input('experience_id'));
+            if ($experience) $experienceDuration = $experience->duracion;
+        }
+
+        $availableSlots = [];
+        foreach ($horariosBase as $hora) {
+            $slotStart = \Carbon\Carbon::parse($fecha . ' ' . $hora);
+            $isAvailable = true;
+
+            if ($experienceDuration > 0) {
+                // Con duración, hacer chequeo de solapamiento completo
+                $slotEnd = $slotStart->copy()->addMinutes($experienceDuration + $breakTime);
+                foreach ($busyIntervals as $busy) {
+                    if ($slotStart < $busy['end'] && $slotEnd > $busy['start']) {
+                        $isAvailable = false;
+                        break;
+                    }
+                }
+            } else {
+                // Sin duración, solo chequear si la hora de inicio está ocupada
+                foreach ($busyIntervals as $busy) {
+                    if ($slotStart >= $busy['start'] && $slotStart < $busy['end']) {
+                        $isAvailable = false;
+                        break;
+                    }
+                }
+            }
+
+            if ($isAvailable) {
+                $availableSlots[] = $hora;
+            }
+        }
+    
+        return response()->json($availableSlots);
+    }
+
+    public function getCabinasForExperience(Request $request, Experience $experience)
+    {
+        $spa = Spa::where('nombre', session('current_spa'))->firstOrFail();
+        
+        $cabinas = Cabina::where('spa_id', $spa->id)
+            ->where('activo', true)
+            ->whereJsonContains('clases_actividad', $experience->nombre)
+            ->get();
+
+        return response()->json($cabinas);
+    }
+
+    public function getExperiencesForAnfitrion(Request $request, Anfitrion $anfitrion)
+    {
+        $spa = Spa::where('nombre', session('current_spa'))->firstOrFail();
+        
+        $clases = $anfitrion->operativo->clases_actividad ?? [];
+
+        if (empty($clases)) {
+            return response()->json([]);
+        }
+
+        $experiences = Experience::where('spa_id', $spa->id)
+            ->where('activo', true)
+            ->whereIn('clase', $clases)
+            ->get();
+
+        return response()->json($experiences);
+    }
     
 }

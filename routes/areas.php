@@ -3,7 +3,7 @@
 use App\Http\Controllers\AreasController;
 
 // --- Ruta para el Gestor de Áreas ---
-Route::middleware(['auth', 'role:master,administrador,anfitrion'])->group(function () {
+Route::middleware(['auth', 'role:master,administrador'])->group(function () {
     Route::get('/areas', [AreasController::class, 'index'])->name('areas.index');
     Route::post('/areas', [AreasController::class, 'store'])->name('areas.store');
     Route::get('/areas/{departamento}/edit', [AreasController::class, 'edit'])->name('areas.edit');

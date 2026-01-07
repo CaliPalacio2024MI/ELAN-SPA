@@ -18,6 +18,85 @@
   @php
     $soloLectura = $soloLectura ?? false;
     $datos = $datosGuardados ?? [];
+
+    // Autocompletar datos si es un formulario nuevo y existe la reservación
+    if (empty($datos) && isset($reservation)) {
+        $cliente = $reservation->cliente;
+        
+        // Generar No. Expediente consecutivo global (independiente del cliente)
+        $maxIdEncontrado = 0;
+        $posiblesTablas = ['evaluations', 'evaluaciones', 'expedientes', 'medical_evaluations', 'medical_forms', 'evaluation_forms', 'reservation_evaluations'];
+        
+        // Intentar detectar tabla desde el modelo si existe
+        if (class_exists('App\Models\Evaluation')) {
+            array_unshift($posiblesTablas, (new \App\Models\Evaluation)->getTable());
+        }
+
+        // Intentar detectar tabla desde relaciones de la reservación
+        if (isset($reservation)) {
+            $relaciones = ['evaluation', 'evaluacion', 'medicalEvaluation', 'medical_evaluation'];
+            foreach ($relaciones as $rel) {
+                if (method_exists($reservation, $rel)) {
+                    try {
+                        $related = $reservation->$rel()->getRelated();
+                        array_unshift($posiblesTablas, $related->getTable());
+                    } catch (\Exception $e) {}
+                }
+            }
+        }
+
+        foreach (array_unique($posiblesTablas) as $tabla) {
+            try {
+                if (!\Illuminate\Support\Facades\Schema::hasTable($tabla)) {
+                    continue;
+                }
+
+                // Intentar obtener el consecutivo desde num_expediente (si existe columna) o id
+                $currentMax = 0;
+                $maxNumExp = 0;
+
+                if (\Illuminate\Support\Facades\Schema::hasColumn($tabla, 'num_expediente')) {
+                    $val = \Illuminate\Support\Facades\DB::table($tabla)->selectRaw('MAX(CAST(num_expediente AS UNSIGNED)) as m')->value('m');
+                    $maxNumExp = $val ? intval($val) : 0;
+                }
+                
+                // Obtener max ID como respaldo o referencia principal si es mayor
+                $maxId = \Illuminate\Support\Facades\DB::table($tabla)->max('id');
+                
+                // Tomar el valor más alto entre el consecutivo guardado y el ID físico
+                $currentMax = max($maxNumExp, $maxId);
+
+                if (!is_null($currentMax)) {
+                    if ($currentMax > $maxIdEncontrado) {
+                        $maxIdEncontrado = $currentMax;
+                    }
+                }
+            } catch (\Exception $e) {
+                continue;
+            }
+        }
+        $consecutivo = $maxIdEncontrado + 1;
+        $datos['num_expediente'] = str_pad($consecutivo, 6, '0', STR_PAD_LEFT);
+        $datos['lugar_fecha'] = date('d/m/Y');
+
+        if ($cliente) {
+            $datos['nombre_paciente'] = trim(($cliente->nombre ?? '') . ' ' . ($cliente->apellido_paterno ?? '') . ' ' . ($cliente->apellido_materno ?? ''));
+            $datos['correo'] = $cliente->email ?? $cliente->correo ?? ''; 
+            $datos['telefono'] = $cliente->telefono ?? '';
+            $datos['fecha_nacimiento'] = $cliente->fecha_nacimiento ?? '';
+            
+            if (!empty($cliente->fecha_nacimiento)) {
+                try {
+                    $datos['edad'] = \Carbon\Carbon::parse($cliente->fecha_nacimiento)->age;
+                } catch (\Exception $e) {}
+            }
+        }
+
+        $anfitrion = $reservation->anfitrion ?? null;
+        $datos['terapeuta'] = $anfitrion ? trim(($anfitrion->nombre_usuario ?? '') . ' ' . ($anfitrion->apellido_paterno ?? '') . ' ' . ($anfitrion->apellido_materno ?? '')) : '';
+        $datos['tratamiento'] = $reservation->experiencia->nombre ?? '';
+        $datos['firma_doctor_nombre'] = $datos['terapeuta'];
+    }
   @endphp
 
 <form method="POST"  action="{{ route('evaluation.store', ['reservation' => $reservation->id]) }}">
@@ -178,22 +257,22 @@
 
         <tr>
           <td rowspan="2">7. ¿Qué tipo de piel tiene?</td>
-          <td><input type="checkbox" id="p7_seca" name="p7[]" value="seca" {{ in_array('seca', $datos['p7'] ?? []) ? 'checked' : '' }} {{ $soloLectura ? 'disabled' : '' }}/> Seca</td>
-          <td><input type="checkbox" id="p7_sensible" name="p7[]" value="sensible" {{ in_array('sensible', $datos['p7'] ?? []) ? 'checked' : '' }} {{ $soloLectura ? 'disabled' : '' }}/> Sensible</td>
+          <td><input type="radio" id="p7_seca" name="p7" value="seca" {{ ($datos['p7'] ?? '') === 'seca' ? 'checked' : '' }} {{ $soloLectura ? 'disabled' : '' }}/> Seca</td>
+          <td><input type="radio" id="p7_sensible" name="p7" value="sensible" {{ ($datos['p7'] ?? '') === 'sensible' ? 'checked' : '' }} {{ $soloLectura ? 'disabled' : '' }}/> Sensible</td>
         </tr>
         <tr>
-          <td><input type="checkbox" id="p7_grasa" name="p7[]" value="grasa" {{ in_array('grasa', $datos['p7'] ?? []) ? 'checked' : '' }} {{ $soloLectura ? 'disabled' : '' }}/> Grasa</td>
-          <td><input type="checkbox" id="p7_mixta" name="p7[]" value="mixta" {{ in_array('mixta', $datos['p7'] ?? []) ? 'checked' : '' }} {{ $soloLectura ? 'disabled' : '' }}/> Mixta</td>
+          <td><input type="radio" id="p7_grasa" name="p7" value="grasa" {{ ($datos['p7'] ?? '') === 'grasa' ? 'checked' : '' }} {{ $soloLectura ? 'disabled' : '' }}/> Grasa</td>
+          <td><input type="radio" id="p7_mixta" name="p7" value="mixta" {{ ($datos['p7'] ?? '') === 'mixta' ? 'checked' : '' }} {{ $soloLectura ? 'disabled' : '' }}/> Mixta</td>
         </tr>
   
    
         <tr>
           <td rowspan="2">8. ¿Qué grado o nivel de presión prefiere el masaje?</td>
-          <td><input type="checkbox" id="p8_suave" name="p8[]" value="suave" {{ in_array('suave', $datos['p8'] ?? []) ? 'checked' : '' }} {{ $soloLectura ? 'disabled' : '' }}/> Suave</td>
-          <td><input type="checkbox" id="p8_fuerte" name="p8[]" value="fuerte" {{ in_array('fuerte', $datos['p8'] ?? []) ? 'checked' : '' }} {{ $soloLectura ? 'disabled' : '' }}/> Fuerte</td>
+          <td><input type="radio" id="p8_suave" name="p8" value="suave" {{ ($datos['p8'] ?? '') === 'suave' ? 'checked' : '' }} {{ $soloLectura ? 'disabled' : '' }}/> Suave</td>
+          <td><input type="radio" id="p8_fuerte" name="p8" value="fuerte" {{ ($datos['p8'] ?? '') === 'fuerte' ? 'checked' : '' }} {{ $soloLectura ? 'disabled' : '' }}/> Fuerte</td>
         </tr>
         <tr>
-          <td colspan="2"><input type="checkbox" id="p8_media" name="p8[]" value="media" {{ in_array('media', $datos['p8'] ?? []) ? 'checked' : '' }} {{ $soloLectura ? 'disabled' : '' }}/> Media</td>
+          <td colspan="2"><input type="radio" id="p8_media" name="p8" value="media" {{ ($datos['p8'] ?? '') === 'media' ? 'checked' : '' }} {{ $soloLectura ? 'disabled' : '' }}/> Media</td>
         </tr>
       </tbody>
     </table>
@@ -214,89 +293,89 @@
         </tr>
   
         <tr>
-          <td><input type="radio" id="artritis_si" name="artritis" value="si" {{ ($datos['artritis'] ?? '') === 'si' ? 'checked' : '' }} {{ $soloLectura ? 'disabled' : '' }}/></td>
+          <td><input type="checkbox" id="artritis_si" name="artritis" value="si" {{ ($datos['artritis'] ?? '') === 'si' ? 'checked' : '' }} {{ $soloLectura ? 'disabled' : '' }}/></td>
           <td><label for="artritis_si">Artritis (tipo - área)</label></td>
           <td colspan="2"><input type="text" id="artritis_detalles" name="artritis_detalles" value="{{ $datos['artritis_detalles'] ?? '' }}" {{ $soloLectura ? 'readonly' : '' }}/></td>
   
-          <td><input type="radio" id="asma_si" name="asma" value="si" {{ ($datos['asma'] ?? '') === 'si' ? 'checked' : '' }} {{ $soloLectura ? 'disabled' : '' }}/></td>
+          <td><input type="checkbox" id="asma_si" name="asma" value="si" {{ ($datos['asma'] ?? '') === 'si' ? 'checked' : '' }} {{ $soloLectura ? 'disabled' : '' }}/></td>
           <td><label for="asma_si">Asma</label></td>
   
-          <td><input type="radio" id="sol_si" name="sol" value="si" {{ ($datos['sol'] ?? '') === 'si' ? 'checked' : '' }} {{ $soloLectura ? 'disabled' : '' }}/></td>
+          <td><input type="checkbox" id="sol_si" name="sol" value="si" {{ ($datos['sol'] ?? '') === 'si' ? 'checked' : '' }} {{ $soloLectura ? 'disabled' : '' }}/></td>
           <td><label for="sol_si">Exposición excesiva al sol</label></td>
         </tr>
   
         <tr>
-          <td><input type="radio" id="cancer_si" name="cancer" value="si" {{ ($datos['cancer'] ?? '') === 'si' ? 'checked' : '' }} {{ $soloLectura ? 'disabled' : '' }}/></td>
+          <td><input type="checkbox" id="cancer_si" name="cancer" value="si" {{ ($datos['cancer'] ?? '') === 'si' ? 'checked' : '' }} {{ $soloLectura ? 'disabled' : '' }}/></td>
           <td><label for="cancer_si">Cáncer (tipo - área)</label></td>
           <td colspan="2"><input type="text" id="cancer_detalles" name="cancer_detalles" value="{{ $datos['cancer_detalles'] ?? '' }}" {{ $soloLectura ? 'readonly' : '' }}/></td>
   
-          <td><input type="radio" id="epilepsia_si" name="epilepsia" value="si" {{ ($datos['epilepsia'] ?? '') === 'si' ? 'checked' : '' }} {{ $soloLectura ? 'disabled' : '' }}/></td>
+          <td><input type="checkbox" id="epilepsia_si" name="epilepsia" value="si" {{ ($datos['epilepsia'] ?? '') === 'si' ? 'checked' : '' }} {{ $soloLectura ? 'disabled' : '' }}/></td>
           <td><label for="epilepsia_si">Epilepsia</label></td>
   
-          <td><input type="radio" id="exfoliacion_si" name="exfoliacion" value="si" {{ ($datos['exfoliacion'] ?? '') === 'si' ? 'checked' : '' }} {{ $soloLectura ? 'disabled' : '' }}/></td>
+          <td><input type="checkbox" id="exfoliacion_si" name="exfoliacion" value="si" {{ ($datos['exfoliacion'] ?? '') === 'si' ? 'checked' : '' }} {{ $soloLectura ? 'disabled' : '' }}/></td>
           <td><label for="exfoliacion_si">Exfoliaciones en la piel</label></td>
         </tr>
   
         <tr>
-          <td><input type="radio" id="diabetes_si" name="diabetes" value="si" {{ ($datos['diabetes'] ?? '') === 'si' ? 'checked' : '' }} {{ $soloLectura ? 'disabled' : '' }}/></td>
+          <td><input type="checkbox" id="diabetes_si" name="diabetes" value="si" {{ ($datos['diabetes'] ?? '') === 'si' ? 'checked' : '' }} {{ $soloLectura ? 'disabled' : '' }}/></td>
           <td><label for="diabetes_si">Diabetes (tipo)</label></td>
           <td colspan="2"><input type="text" id="diabetes_detalles" name="diabetes_detalles" value="{{ $datos['diabetes_detalles'] ?? '' }}" {{ $soloLectura ? 'readonly' : '' }}/></td>
   
-          <td><input type="radio" id="mareos_si" name="mareos" value="si" {{ ($datos['mareos'] ?? '') === 'si' ? 'checked' : '' }} {{ $soloLectura ? 'disabled' : '' }}/></td>
+          <td><input type="checkbox" id="mareos_si" name="mareos" value="si" {{ ($datos['mareos'] ?? '') === 'si' ? 'checked' : '' }} {{ $soloLectura ? 'disabled' : '' }}/></td>
           <td><label for="mareos_si">Mareos</label></td>
   
-          <td><input type="radio" id="dermatitis_si" name="dermatitis" value="si" {{ ($datos['dermatitis'] ?? '') === 'si' ? 'checked' : '' }} {{ $soloLectura ? 'disabled' : '' }}/></td>
+          <td><input type="checkbox" id="dermatitis_si" name="dermatitis" value="si" {{ ($datos['dermatitis'] ?? '') === 'si' ? 'checked' : '' }} {{ $soloLectura ? 'disabled' : '' }}/></td>
           <td><label for="dermatitis_si">Dermatitis o afectaciones en la piel</label></td>
         </tr>
   
         <tr>
-          <td><input type="radio" id="presion_si" name="presion" value="si" {{ ($datos['presion'] ?? '') === 'si' ? 'checked' : '' }} {{ $soloLectura ? 'disabled' : '' }}/></td>
+          <td><input type="checkbox" id="presion_si" name="presion" value="si" {{ ($datos['presion'] ?? '') === 'si' ? 'checked' : '' }} {{ $soloLectura ? 'disabled' : '' }}/></td>
           <td><label for="presion_si">Presión (alta o baja)</label></td>
           <td colspan="2"><input type="text" id="presion_detalles" name="presion_detalles" value="{{ $datos['presion_detalles'] ?? '' }}" {{ $soloLectura ? 'readonly' : '' }}/></td>
   
-          <td><input type="radio" id="renal_si" name="renal" value="si" {{ ($datos['renal'] ?? '') === 'si' ? 'checked' : '' }} {{ $soloLectura ? 'disabled' : '' }}/></td>
+          <td><input type="checkbox" id="renal_si" name="renal" value="si" {{ ($datos['renal'] ?? '') === 'si' ? 'checked' : '' }} {{ $soloLectura ? 'disabled' : '' }}/></td>
           <td><label for="renal_si">Padecimiento renal</label></td>
   
-          <td><input type="radio" id="depilacion_si" name="depilacion" value="si" {{ ($datos['depilacion'] ?? '') === 'si' ? 'checked' : '' }} {{ $soloLectura ? 'disabled' : '' }}/></td>
+          <td><input type="checkbox" id="depilacion_si" name="depilacion" value="si" {{ ($datos['depilacion'] ?? '') === 'si' ? 'checked' : '' }} {{ $soloLectura ? 'disabled' : '' }}/></td>
           <td><label for="depilacion_si">Tratamiento de depilación definitiva (área)</label></td>
         </tr>
   
         <tr>
-          <td><input type="radio" id="calambres_si" name="calambres" value="si" {{ ($datos['calambres'] ?? '') === 'si' ? 'checked' : '' }} {{ $soloLectura ? 'disabled' : '' }}/></td>
+          <td><input type="checkbox" id="calambres_si" name="calambres" value="si" {{ ($datos['calambres'] ?? '') === 'si' ? 'checked' : '' }} {{ $soloLectura ? 'disabled' : '' }}/></td>
           <td><label for="calambres_si">Calambres (¿dónde?)</label></td>
           <td colspan="2"><input type="text" id="calambres_detalles" name="calambres_detalles" value="{{ $datos['calambres_detalles'] ?? '' }}" {{ $soloLectura ? 'readonly' : '' }}/></td>
   
-          <td><input type="radio" id="coagulacion_si" name="coagulacion" value="si" {{ ($datos['coagulacion'] ?? '') === 'si' ? 'checked' : '' }} {{ $soloLectura ? 'disabled' : '' }}/></td>
+          <td><input type="checkbox" id="coagulacion_si" name="coagulacion" value="si" {{ ($datos['coagulacion'] ?? '') === 'si' ? 'checked' : '' }} {{ $soloLectura ? 'disabled' : '' }}/></td>
           <td><label for="coagulacion_si">Alteración en la coagulación</label></td>
           <td colspan="2"><input type="text" id="coagulacion_detalles" name="coagulacion_detalles" value="{{ $datos['coagulacion_detalles'] ?? '' }}" {{ $soloLectura ? 'readonly' : '' }}/></td>
         </tr>
   
         <tr>
-          <td><input type="radio" id="cirugias_si" name="cirugias" value="si" {{ ($datos['cirugias'] ?? '') === 'si' ? 'checked' : '' }} {{ $soloLectura ? 'disabled' : '' }}/></td>
+          <td><input type="checkbox" id="cirugias_si" name="cirugias" value="si" {{ ($datos['cirugias'] ?? '') === 'si' ? 'checked' : '' }} {{ $soloLectura ? 'disabled' : '' }}/></td>
           <td><label for="cirugias_si">Cirugías (área - tiempo)</label></td>
           <td colspan="2"><input type="text" id="cirugias_detalles" name="cirugias_detalles" value="{{ $datos['cirugias_detalles'] ?? '' }}" {{ $soloLectura ? 'readonly' : '' }}/></td>
   
-          <td><input type="radio" id="condicion_otra_si" name="condicion_otra" value="si" {{ ($datos['condicion_otra'] ?? '') === 'si' ? 'checked' : '' }} {{ $soloLectura ? 'disabled' : '' }}/></td>
+          <td><input type="checkbox" id="condicion_otra_si" name="condicion_otra" value="si" {{ ($datos['condicion_otra'] ?? '') === 'si' ? 'checked' : '' }} {{ $soloLectura ? 'disabled' : '' }}/></td>
           <td><label for="condicion_otra_si">Otra condición médica (especificar)</label></td>
           <td colspan="2"><input type="text" id="condicion_detalles" name="condicion_detalles" value="{{ $datos['condicion_detalles'] ?? '' }}" {{ $soloLectura ? 'readonly' : '' }}/></td>
         </tr>
   
         <tr>
-          <td><input type="radio" id="torceduras_si" name="torceduras" value="si" {{ ($datos['torceduras'] ?? '') === 'si' ? 'checked' : '' }} {{ $soloLectura ? 'disabled' : '' }}/></td>
+          <td><input type="checkbox" id="torceduras_si" name="torceduras" value="si" {{ ($datos['torceduras'] ?? '') === 'si' ? 'checked' : '' }} {{ $soloLectura ? 'disabled' : '' }}/></td>
           <td><label for="torceduras_si">Torceduras (área - tiempo)</label></td>
           <td colspan="2"><input type="text" id="torceduras_detalles" name="torceduras_detalles" value="{{ $datos['torceduras_detalles'] ?? '' }}" {{ $soloLectura ? 'readonly' : '' }}/></td>
   
-          <td><input type="radio" id="auricular_si" name="auricular" value="si" {{ ($datos['auricular'] ?? '') === 'si' ? 'checked' : '' }} {{ $soloLectura ? 'disabled' : '' }}/></td>
+          <td><input type="checkbox" id="auricular_si" name="auricular" value="si" {{ ($datos['auricular'] ?? '') === 'si' ? 'checked' : '' }} {{ $soloLectura ? 'disabled' : '' }}/></td>
           <td><label for="auricular_si">Aparato auricular</label></td>
           <td colspan="2"><input type="text" id="auricular_detalles" name="auricular_detalles" value="{{ $datos['auricular_detalles'] ?? '' }}" {{ $soloLectura ? 'readonly' : '' }}/></td>
         </tr>
   
         <tr>
-          <td><input type="radio" id="columna_si" name="columna" value="si" {{ ($datos['columna'] ?? '') === 'si' ? 'checked' : '' }} {{ $soloLectura ? 'disabled' : '' }}/></td>
+          <td><input type="checkbox" id="columna_si" name="columna" value="si" {{ ($datos['columna'] ?? '') === 'si' ? 'checked' : '' }} {{ $soloLectura ? 'disabled' : '' }}/></td>
           <td><label for="columna_si">Lesión en columna (área)</label></td>
           <td colspan="2"><input type="text" id="columna_detalles" name="columna_detalles" value="{{ $datos['columna_detalles'] ?? '' }}" {{ $soloLectura ? 'readonly' : '' }}/></td>
 
-          <td><input type="radio" id="marcapasos_si" name="marcapasos" value="si" {{ ($datos['marcapasos'] ?? '') === 'si' ? 'checked' : '' }} {{ $soloLectura ? 'disabled' : '' }}/></td>
+          <td><input type="checkbox" id="marcapasos_si" name="marcapasos" value="si" {{ ($datos['marcapasos'] ?? '') === 'si' ? 'checked' : '' }} {{ $soloLectura ? 'disabled' : '' }}/></td>
           <td><label for="marcapasos_si">Marcapasos</label></td>
         </tr>
       </tbody>

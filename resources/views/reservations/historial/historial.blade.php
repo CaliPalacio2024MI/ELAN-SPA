@@ -34,6 +34,54 @@
 <header class="main-header">
     <h2>HISTORIAL DE PAGOS</h2>
 </header>
+{{-- Formulario de filtros y rango de fechas (dentro de la misma caja visual que la tabla) --}}
+<div class="table-container" style="margin-bottom:1rem;">
+    <div class="table-responsive">
+        <form method="GET" action="{{ route('reservations.historial') }}" class="filtro-form" style="display:flex;gap:0.75rem;flex-wrap:wrap;align-items:end;padding:0.75rem;">
+            <div>
+                <label for="desde">Desde</label>
+                <input type="date" id="desde" name="desde" value="{{ request('desde') }}" class="form-control search-input">
+            </div>
+            <div>
+                <label for="hasta">Hasta</label>
+                <input type="date" id="hasta" name="hasta" value="{{ request('hasta') }}" class="form-control search-input">
+            </div>
+
+            <div>
+                <label for="busqueda">Buscar</label>
+                <input type="text" id="busqueda" name="busqueda" placeholder="Cliente, experiencia, cabina..." value="{{ request('busqueda') }}" class="form-control search-input">
+            </div>
+
+            <div>
+                <label for="pagado">Estado pago</label>
+                <select id="pagado" name="pagado" class="form-select search-input">
+                    <option value="">Todos</option>
+                    <option value="pagado" {{ request('pagado') == 'pagado' ? 'selected' : '' }}>Pagado</option>
+                    <option value="pendiente" {{ request('pagado') == 'pendiente' ? 'selected' : '' }}>Pendiente</option>
+                </select>
+            </div>
+
+            <div style="display:flex;gap:0.5rem;align-items:center;">
+                <button type="submit" class="btns">Filtrar</button>
+                @php
+                    $exportParams = ['tipo' => 'historial'];
+                    foreach (['desde','hasta','busqueda','pagado'] as $p) {
+                        $val = request($p);
+                        if (!is_null($val) && $val !== '') {
+                            $exportParams[$p] = $val;
+                        }
+                    }
+                @endphp
+                <a href="{{ route('reports.export.tipo', $exportParams) }}"
+                   class="btn-export-section tiny-download"
+                   data-export-type="checkouts"
+                   title="Exportar historial a Excel">
+                    <i class="fas fa-download"></i>
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
 
 <div class="table-container">
     <table class="table-responsive custom-table">
@@ -45,8 +93,7 @@
                 <th>Anfitrión</th>
                 <th>Fecha</th>
                 <th>Hora</th>
-                <th>Grupo Reserva</th>
-                <th>Pagado?</th>
+                <th>Estado</th>
                 <th>Acciones</th>
             </tr>
         </thead>
@@ -65,7 +112,6 @@
                     <td>{{ $reserva->anfitrion?->nombre_usuario ?? '—' }}</td>
                     <td>{{ \Carbon\Carbon::parse($reserva->fecha)->format('d/m/Y') }}</td>
                     <td>{{ $reserva->hora }}</td>
-                    <td>{{ $reserva->grupo_reserva_id ?? '—' }}</td>
                     <td>
                         @if ($reserva->check_out)
                             <span class="badge bg-success">Pagado</span>

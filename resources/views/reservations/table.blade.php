@@ -11,6 +11,9 @@
                     @endphp
                     <th class="{{ $esSalon ? 'encabezado-salon' : '' }}">
                         {{ $anfitrion->nombre_usuario }} {{ $anfitrion->apellido_paterno }}
+                        @if ($anfitrion->operativo && !empty($anfitrion->operativo->clases_actividad))
+                            <i class="fas fa-question-circle" title="{{ implode(', ', $anfitrion->operativo->clases_actividad) }}" style="margin-left: 5px; cursor: pointer;"></i>
+                        @endif
                     </th>
                 @endforeach
             </tr>
@@ -65,10 +68,12 @@
                                     $saltos[$anfitrion->id] = $rowspan - 1; // Saltar siguientes celdas para esta reserva
                                 @endphp
                                 <td 
+                                    draggable="true"
                                     data-hora="{{ $horaCompleta }}" 
                                     data-anfitrion="{{ $anfitrion->id }}"
                                     data-reserva-id="{{ $reserva->id }}" 
                                     data-check-in="{{ $reserva->check_in ? 1 : 0 }}"
+                                    data-check-out="{{ $reserva->check_out ? 1 : 0 }}"
                                     class="reserva-celda occupied"
                                     rowspan="{{ $rowspan }}"
                                     style="background-color: {{ $reserva->experiencia->color ?? '#ccc' }}"
@@ -106,30 +111,38 @@
                                 </td>
 
                             {{-- Si no hay reserva ni bloqueo --}}
+                          @else
+                           @php
+                            $horario = $horariosAnfitriones[$anfitrion->id] ?? [];
+                            $diaSemana = strtolower(\Carbon\Carbon::parse($fechaSeleccionada)->locale('es')->isoFormat('dddd'));
+                            $diaSemana = str_replace(['á','é','í','ó','ú'], ['a','e','i','o','u'], $diaSemana);
+                            $horarioDelDia = $horario[$diaSemana] ?? [];
+                            $disponible = false;
+                            if (empty($horarioDelDia)) {
+                             echo '<td class="reserva-celda no-disponible" style="background-color: yellow;">SIN HORARIO (' . $diaSemana . ')</td>';
+                             continue;
+                            }
+                           $match = in_array($horaCompleta, $horarioDelDia);
+                           if (!$match) {
+                            $listaHoras = implode(',', $horarioDelDia);
+                            $debug_message = ['bg' => 'red', 'text' => 'No COINCIDE. Buscando: ' . $horaCompleta . ' en: ' . $listaHoras];
+                            $is_debug = true;
+                           } else {
+                            $disponible = true;
+                           }
+                          @endphp
+                          @if ($disponible)
+                              <td
+                              data-hora="{{ $horaCompleta }}"
+                              data-anfitrion="{{ $anfitrion->id }}"
+                              class="reserva-celda available">
+                              Disponible
+                               </td>
                             @else
-                                @php
-                                    $horario = $horariosAnfitriones[$anfitrion->id] ?? [];
-                                    // Día de la semana en minúsculas sin acentos
-                                    $diaSemana = strtolower(\Carbon\Carbon::parse($fechaSeleccionada)->translatedFormat('l'));
-                                    $diaSemana = strtr($diaSemana, ['á' => 'a', 'é' => 'e', 'í' => 'i', 'ó' => 'o', 'ú' => 'u']);
-
-                                    // Verificar disponibilidad en horario
-                                    $disponible = in_array($horaCompleta, $horario[$diaSemana] ?? []);
-                                @endphp
-                                @if ($disponible)
-                                    <td 
-                                        data-hora="{{ $horaCompleta }}" 
-                                        data-anfitrion="{{ $anfitrion->id }}" 
-                                        class="reserva-celda available"
-                                        data-clase="{{ strtolower($anfitrion->operativo->clases_actividad[0] ?? '') }}"
-                                    >
-                                        Disponible
-                                    </td>
-                                @else
-                                    <td class="reserva-celda no-disponible"></td>
-                                @endif
+                             <td class="reserva-celda no-disponible"></td>
                             @endif
-                        @endforeach                    
+                       @endif 
+                    @endforeach 
                     </tr>
                 @endfor
             @endfor

@@ -46,57 +46,31 @@ export const ContextMenuHandler = {
     abrirFormularioReservacion(event) {
         event.preventDefault();
         const target = event.target;
-
+ 
         const hora = target.dataset.hora;
-        const anfitrion = target.dataset.anfitrion;
-        const claseRaw = target.dataset.clase || "";
-        const clasesAnfitrion = claseRaw
-            .split(",")
-            .map(c => c.trim().toLowerCase())
-            .filter(c => c.length > 0); // Evita entradas vacías
-
-        console.log("🟡 Anfitrión ID:", anfitrion);
-        console.log("🟡 Clases del anfitrión:", clasesAnfitrion);
-
+        const anfitrionId = target.dataset.anfitrion;
+ 
         ReservationFormHandler.limpiarFormulario();
-
+ 
+        // Centralizamos el filtrado de experiencias en formHandler
+        const formPrincipal = document.getElementById('reservationForm');
+        ReservationFormHandler.filtrarExperienciasPorAnfitrion(anfitrionId, formPrincipal, false);
+ 
         const select = document.getElementById("experiencia_id");
-        const todas = window.ReservasConfig.experiencias || [];
-
-        console.log("🟢 Todas las experiencias:", todas);
-
-        select.innerHTML = '<option value="">Selecciona experiencia</option>';
-
-        let totalFiltradas = 0;
-
-        // Filtra experiencias según clases del anfitrión
-        todas.forEach(exp => {
-            const claseExp = (exp.clase || "").toLowerCase().trim();
-            console.log(`🔍 Revisando experiencia: ${exp.nombre} | clase: ${claseExp}`);
-
-            if (clasesAnfitrion.includes(claseExp)) {
-                const opt = document.createElement("option");
-                opt.value = exp.id;
-                opt.textContent = `${exp.nombre} - ${exp.duracion} min - $${exp.precio}`;
-                opt.dataset.duracion = exp.duracion;
-                select.appendChild(opt);
-                totalFiltradas++;
-            }
-        });
-
-        console.log(`✅ Total experiencias filtradas: ${totalFiltradas}`);
-
+ 
         // Auto selecciona si solo hay una opción válida
         if (select.options.length === 2) {
             select.selectedIndex = 1;
             select.dispatchEvent(new Event("change"));
         }
-
+ 
         // Llena campos básicos y muestra modal
-        document.getElementById("fecha").value = new Date().toISOString().split("T")[0];
+        // Usar la fecha del filtro principal de la página, no la fecha actual.
+        const fechaFiltro = document.getElementById("filtro_fecha")?.value;
+        document.getElementById("fecha_reserva").value = fechaFiltro || new Date().toISOString().split("T")[0];
         document.getElementById("hora").value = hora;
-        document.getElementById("selected_anfitrion").value = anfitrion;
-
+        document.getElementById("selected_anfitrion").value = anfitrionId;
+ 
         document.getElementById("modalTitle").textContent = "Nueva Reservación";
         document.getElementById("saveButton").textContent = "Guardar Reservación";
         document.getElementById("reserva_id").value = "";

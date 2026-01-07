@@ -930,3 +930,15 @@ body, html {
         padding: 8px;
     }
 }
+
+/* Estilos para Drag and Drop */
+.reserva-celda.drag-over {
+    background-color: #d4edda !important;
+    border: 2px dashed #155724;
+}
+
+.reserva-celda.drag-forbidden {
+    background-color: #f8d7da !important;
+    border: 2px dashed #721c24;
+    cursor: not-allowed;
+}

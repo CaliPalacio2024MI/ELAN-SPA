@@ -115,6 +115,12 @@ class AnfitrionController extends Controller
             })
             ->toArray();
 
+        // Obtener los departamentos disponibles para los formularios
+        $departamentosDisponibles = Departamento::where('spa_id', $spaId)
+            ->where('activo', true)
+            ->orderBy('nombre')
+            ->pluck('nombre');
+
         return view('gestores.gestor_anfitriones', [
             'anfitriones' => $anfitriones,
             'spas' => Spa::all(),
@@ -122,6 +128,7 @@ class AnfitrionController extends Controller
             'todasClases' => $todasClases,
             'clasesDisponibles' => $clasesDisponibles,
             'experienciasPorClase' => $experienciasPorClase,
+            'departamentosDisponibles' => $departamentosDisponibles, // <-- Variable que faltaba
         ]);
     }
 
@@ -144,6 +151,7 @@ class AnfitrionController extends Controller
                 )
             ],
             // --- FIN DE CAMBIO ---
+            'porcentaje_servicio' => 'nullable|numeric|min:0|max:100',
             'accesos' => 'nullable|array',
             'accesos.*' => 'integer|exists:spas,id',
         ], [
@@ -179,6 +187,7 @@ class AnfitrionController extends Controller
             'departamento' => $request->departamento,
             'accesos' => $request->filled('accesos') ? array_values(array_map('intval', $request->accesos)) : [],
             'activo' => $request->activo ?? true,
+            'porcentaje_servicio' => $request->porcentaje_servicio,
         ]);
 
         AnfitrionOperativo::create([
@@ -218,6 +227,7 @@ class AnfitrionController extends Controller
                 )
             ],
             // --- FIN DE CAMBIO ---
+            'porcentaje_servicio' => 'nullable|numeric|min:0|max:100',
             'accesos' => 'nullable|array',
             'accesos.*' => 'integer|exists:spas,id',
             'activo' => 'boolean',
@@ -242,6 +252,7 @@ class AnfitrionController extends Controller
                 'departamento' => $request->departamento,
                 'accesos' => $request->filled('accesos') ? array_values(array_map('intval', $request->accesos)) : [],
                 'activo' => $request->activo ?? true,
+                'porcentaje_servicio' => $request->porcentaje_servicio,
             ]);
 
             if ($request->filled('password')) {

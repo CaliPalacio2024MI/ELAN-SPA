@@ -78,6 +78,7 @@
                     <th>Apellido paterno</th>
                     <th>Rol</th>
                     <th>Departamento</th>
+                    <th>% Servicio</th>
                     <th>Especialidades</th>
                     <th>Accesos</th>
                     <th>Activo</th>
@@ -92,6 +93,7 @@
                         <td>{{ $anfitrion->apellido_paterno }}</td>
                         <td>{{ ucfirst($anfitrion->rol) }}</td>
                         <td>{{ ucfirst($anfitrion->operativo?->departamento ?? '—') }}</td>
+                        <td>{{ $anfitrion->porcentaje_servicio ? $anfitrion->porcentaje_servicio . '%' : '15%' }}</td>
                         <td>
                             @if (!empty($anfitrion->operativo?->clases_actividad))
                                 {{ implode(', ', $anfitrion->operativo->clases_actividad) }}
@@ -131,6 +133,7 @@
                                 data-apellido-materno="{{ $anfitrion->apellido_materno}}"
                                 data-rol="{{ $anfitrion->rol }}"
                                 data-departamento="{{($anfitrion->operativo?->departamento ?? '—') }}"
+                                data-porcentaje-servicio="{{ $anfitrion->porcentaje_servicio ?? '' }}"
                                 data-clases='@json($anfitrion->operativo?->clases_actividad ?? [])'
                                 data-accesos='@json($anfitrion->accesos)'
                                 data-activo="{{ $anfitrion->activo }}">
@@ -227,60 +230,35 @@
                         </div>
 
                         <div class="mb-3">
+                            <label for="porcentaje_servicio" class="form-label">Porcentaje por cargo del servicio</label>
+                            <input type="number" step="0.01" min="0" max="100" class="form-control {{ $errors->create->has('porcentaje_servicio') ? 'is-invalid' : '' }}" id="porcentaje_servicio" name="porcentaje_servicio" value="{{ $fromEdit ? '' : old('porcentaje_servicio') }}">
+                            @error('porcentaje_servicio', 'create')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                        </div>
+
+                        <div class="mb-3">
                             <label class="form-label">Especialidades</label>
 
-                            @php
-                                $mapCategorias = ['masajes' => [], 'faciales' => [], 'corporales' => []];
-                                foreach (($experienciasPorClase ?? []) as $claseName => $tipos) {
-                                    $k = strtolower($claseName);
-                                    if (strpos($k, 'masaj') !== false) {
-                                        $mapCategorias['masajes'] = $tipos;
-                                    } elseif (strpos($k, 'facial') !== false) {
-                                        $mapCategorias['faciales'] = $tipos;
-                                    } elseif (strpos($k, 'corpor') !== false || strpos($k, 'corp') !== false) {
-                                        $mapCategorias['corporales'] = $tipos;
-                                    }
-                                }
-                            @endphp
-
-                            <div class="form-check">
-                                <input class="form-check-input main-cat" type="checkbox" value="masajes" id="cat_masajes" data-target="subtipo_masajes">
-                                <label class="form-check-label" for="cat_masajes">Masajes</label>
-                            </div>
-                            <div id="subtipo_masajes" class="ps-3 mt-2 subtipo-container" style="display:none;">
-                                @foreach ($mapCategorias['masajes'] as $idx => $tipo)
-                                    <div class="form-check">
-                                        <input class="form-check-input subtype-checkbox" type="checkbox" name="clases_actividad[]" value="{{ $tipo }}" id="masaje_tipo_{{ $idx }}">
-                                        <label class="form-check-label" for="masaje_tipo_{{ $idx }}">{{ $tipo }}</label>
-                                    </div>
-                                @endforeach
-                            </div>
-
-                            <div class="form-check mt-2">
-                                <input class="form-check-input main-cat" type="checkbox" value="faciales" id="cat_faciales" data-target="subtipo_faciales">
-                                <label class="form-check-label" for="cat_faciales">Faciales</label>
-                            </div>
-                            <div id="subtipo_faciales" class="ps-3 mt-2 subtipo-container" style="display:none;">
-                                @foreach ($mapCategorias['faciales'] as $idx => $tipo)
-                                    <div class="form-check">
-                                        <input class="form-check-input subtype-checkbox" type="checkbox" name="clases_actividad[]" value="{{ $tipo }}" id="facial_tipo_{{ $idx }}">
-                                        <label class="form-check-label" for="facial_tipo_{{ $idx }}">{{ $tipo }}</label>
-                                    </div>
-                                @endforeach
-                            </div>
-
-                            <div class="form-check mt-2">
-                                <input class="form-check-input main-cat" type="checkbox" value="corporales" id="cat_corporales" data-target="subtipo_corporales">
-                                <label class="form-check-label" for="cat_corporales">Corporales</label>
-                            </div>
-                            <div id="subtipo_corporales" class="ps-3 mt-2 subtipo-container" style="display:none;">
-                                @foreach ($mapCategorias['corporales'] as $idx => $tipo)
-                                    <div class="form-check">
-                                        <input class="form-check-input subtype-checkbox" type="checkbox" name="clases_actividad[]" value="{{ $tipo }}" id="corporal_tipo_{{ $idx }}">
-                                        <label class="form-check-label" for="corporal_tipo_{{ $idx }}">{{ $tipo }}</label>
-                                    </div>
-                                @endforeach
-                            </div>
+                            @forelse (($experienciasPorClase ?? []) as $claseName => $tipos)
+                                @php
+                                    $safeClassId = str_replace(' ', '_', strtolower($claseName));
+                                @endphp
+                                <div class="form-check">
+                                    <input class="form-check-input main-cat" type="checkbox" value="{{ $claseName }}" id="cat_{{ $safeClassId }}" data-target="subtipo_{{ $safeClassId }}">
+                                    <label class="form-check-label" for="cat_{{ $safeClassId }}">{{ ucfirst($claseName) }}</label>
+                                </div>
+                                <div id="subtipo_{{ $safeClassId }}" class="ps-3 mt-2 subtipo-container" style="display:none;">
+                                    @foreach ($tipos as $idx => $tipo)
+                                        <div class="form-check">
+                                            <input class="form-check-input subtype-checkbox" type="checkbox" name="clases_actividad[]" value="{{ $tipo }}" id="{{ $safeClassId }}_tipo_{{ $idx }}">
+                                            <label class="form-check-label" for="{{ $safeClassId }}_tipo_{{ $idx }}">{{ $tipo }}</label>
+                                        </div>
+                                    @endforeach
+                                </div>
+                            @empty
+                                <p class="text-muted">No hay especialidades disponibles.</p>
+                            @endforelse
                         </div>
 
                         <div class="mb-3">
@@ -404,6 +382,14 @@
                         </select>
                         @if ($errors->edit->has('departamento'))
                             <div class="invalid-feedback">{{ $errors->edit->first('departamento') }}</div>
+                        @endif
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="edit_porcentaje_servicio" class="form-label">Porcentaje por cargo del servicio</label>
+                        <input type="number" step="0.01" min="0" max="100" class="form-control {{ $errors->edit->has('porcentaje_servicio') ? 'is-invalid' : '' }}" id="edit_porcentaje_servicio" name="porcentaje_servicio">
+                        @if ($errors->edit->has('porcentaje_servicio'))
+                            <div class="invalid-feedback">{{ $errors->edit->first('porcentaje_servicio') }}</div>
                         @endif
                     </div>
 
@@ -614,6 +600,11 @@
 
                 const editForm = document.getElementById('editAnfitrionForm');
                 if (editForm) editForm.action = '/anfitriones/' + id;
+
+                // Cargar porcentaje servicio
+                const porcentaje = button.getAttribute('data-porcentaje-servicio');
+                const inputPorcentaje = document.getElementById('edit_porcentaje_servicio');
+                if (inputPorcentaje) inputPorcentaje.value = porcentaje || '';
 
                 // Limpiar selección previa
                 document.querySelectorAll('.edit-subtype-checkbox').forEach(ch => ch.checked = false);

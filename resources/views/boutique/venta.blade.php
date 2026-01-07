@@ -19,6 +19,23 @@
         @vite('resources/css/componentes/selectDropdown.css')
         @vite('resources/css/componentes/modal.css')
     @endif
+    <style>
+        .swal2-password-container {
+            position: relative;
+            margin-bottom: 1rem;
+        }
+        .swal2-password-container .swal2-input {
+            padding-right: 2.5em; /* Espacio para el icono */
+        }
+        .swal2-password-icon {
+            position: absolute;
+            top: 50%;
+            right: 0.8em;
+            transform: translateY(-50%);
+            cursor: pointer;
+            color: #888;
+        }
+    </style>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 @endsection
 
@@ -160,6 +177,7 @@
     <script>
         const anfitriones_data = @json($anfitriones);
         const articulos_data = @json($compra);
+        const isMasterUser = @json($isMaster ?? false);
     </script>
 
     <!-- Formulario -->
@@ -249,24 +267,72 @@
 
             // --- INICIO: Verificación de contraseña para descuento ---
             if (descuento > 0) {
-                const {
-                    value: password
-                } = await Swal.fire({
+                const showCancelButton = true;
+                const showDenyButton = isMasterUser;
+
+                const result = await Swal.fire({
                     title: 'Se requiere autorización',
                     input: 'password',
                     inputLabel: 'Ingresa la contraseña para aplicar el descuento',
                     inputPlaceholder: 'Contraseña...',
                     inputAttributes: {
                         autocapitalize: 'off',
-                        autocorrect: 'off'
+                        autocorrect: 'off',
+                        'aria-label': 'Contraseña para descuento'
+                    },
+                    confirmButtonText: 'Aplicar Descuento',
+                    showCancelButton: showCancelButton,
+                    cancelButtonText: 'Cancelar',
+                    showDenyButton: showDenyButton,
+                    denyButtonText: 'Cambiar Contraseña',
+                    inputValidator: (value) => {
+                        if (!value) {
+                            return '¡Necesitas escribir la contraseña!'
+                        }
                     }
                 });
 
-                if (password !== 'C4lid4d$') { // contraseña actual
-                    MundoImperial.modalMensajeMostrar("modal-mensaje", "Acceso denegado",
-                        "<p>La contraseña es incorrecta. No se aplicará el descuento.</p>");
-                    document.getElementById("descuento").value = ""; // Limpiar el campo de descuento
-                    return; // Detener la ejecución
+                if (result.isDenied) {
+                    // Lógica para cambiar la contraseña
+                    await cambiarContrasenaDescuento();
+                    return; // Detener la adición del producto, el usuario debe reintentar
+                }
+
+                if (result.isDismissed) {
+                    // El usuario canceló
+                    document.getElementById("descuento").value = "";
+                    return;
+                }
+
+                if (result.isConfirmed) {
+                    const password = result.value;
+                    try {
+                        const response = await fetch('{{ route('boutique.venta.verificarPassword') }}', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Accept': 'application/json',
+                                'X-CSRF-TOKEN': document.querySelector(
+                                    'meta[name="csrf-token"]').content,
+                            },
+                            body: JSON.stringify({
+                                password
+                            }),
+                        });
+
+                        if (!response.ok) {
+                            const errorData = await response.json();
+                            throw new Error(errorData.message || 'Error de validación');
+                        }
+
+                        // Contraseña correcta, continuar con la lógica
+
+                    } catch (error) {
+                        MundoImperial.modalMensajeMostrar("modal-mensaje", "Acceso denegado",
+                            `<p>${error.message}</p>`);
+                        document.getElementById("descuento").value = ""; // Limpiar el campo de descuento
+                        return; // Detener la ejecución
+                    }
                 }
             }
 
@@ -337,6 +403,87 @@
                     "¿Estás seguro de eliminar este producto?", () => eliminarProducto(event));
             });
         });
+
+        async function cambiarContrasenaDescuento() {
+            const {
+                value: formValues
+            } = await Swal.fire({
+                title: 'Cambiar Contraseña de Descuento',
+                html: `
+                    <div class="swal2-password-container">
+                        <input type="password" id="swal-old_password" class="swal2-input" placeholder="Contraseña Antigua">
+                        <i class="fas fa-eye swal2-password-icon" onclick="togglePasswordVisibility('swal-old_password', this)"></i>
+                    </div>
+                    <div class="swal2-password-container">
+                        <input type="password" id="swal-new_password" class="swal2-input" placeholder="Nueva Contraseña">
+                        <i class="fas fa-eye swal2-password-icon" onclick="togglePasswordVisibility('swal-new_password', this)"></i>
+                    </div>
+                    <div class="swal2-password-container">
+                        <input type="password" id="swal-new_password_confirmation" class="swal2-input" placeholder="Confirmar Nueva Contraseña">
+                        <i class="fas fa-eye swal2-password-icon" onclick="togglePasswordVisibility('swal-new_password_confirmation', this)"></i>
+                    </div>
+                    <small style="text-align: left; display: block; color: #6c757d;">La contraseña debe tener al menos 8 caracteres.</small>
+                `,
+                focusConfirm: false,
+                confirmButtonText: 'Aceptar',
+                showCancelButton: true,
+                cancelButtonText: 'Cancelar',
+                preConfirm: () => {
+                    return {
+                        old_password: document.getElementById('swal-old_password').value,
+                        new_password: document.getElementById('swal-new_password').value,
+                        new_password_confirmation: document.getElementById('swal-new_password_confirmation')
+                            .value
+                    }
+                }
+            });
+
+            if (formValues) {
+                try {
+                    const response = await fetch('{{ route('boutique.venta.cambiarPassword') }}', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json',
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')
+                                .content,
+                        },
+                        body: JSON.stringify(formValues),
+                    });
+
+                    const data = await response.json();
+
+                    if (!response.ok) {
+                        let errorHtml = '';
+                        if (data.errors) {
+                            errorHtml = Object.values(data.errors).map(e => `<p>${e[0]}</p>`).join('');
+                        } else {
+                            errorHtml = `<p>${data.message || 'Ocurrió un error.'}</p>`;
+                        }
+                        Swal.fire('Error', errorHtml, 'error');
+                        return;
+                    }
+
+                    Swal.fire('¡Éxito!', data.message, 'success');
+
+                } catch (error) {
+                    Swal.fire('Error', 'No se pudo conectar con el servidor.', 'error');
+                }
+            }
+        }
+
+        function togglePasswordVisibility(inputId, icon) {
+            const input = document.getElementById(inputId);
+            if (input.type === "password") {
+                input.type = "text";
+                icon.classList.remove("fa-eye");
+                icon.classList.add("fa-eye-slash");
+            } else {
+                input.type = "password";
+                icon.classList.remove("fa-eye-slash");
+                icon.classList.add("fa-eye");
+            }
+        }
     </script>
 
     <!-- Completar Venta -->
