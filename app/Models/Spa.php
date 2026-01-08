@@ -43,4 +43,13 @@ class Spa extends Model
     {
         return $this->hasMany(Cabina::class, 'spa_id');
     }
+
+    /**
+     * Si este Spa es una 'Unidad' personalizada, tendrá un registro de detalle asociado.
+     * Usamos hasOne porque cada Spa creado para una Unidad es único para esa Unidad.
+     */
+    public function unidad_detalle()
+    {
+        return $this->hasOne(Unidad::class, 'spa_id');
+    }
 }

@@ -58,7 +58,8 @@
     $idsPermitidos = array_unique(array_merge([$principalSpaId], $accesos));
 
     // Obtener colección de spas disponibles para el usuario
-    $spasDisponibles = Spa::whereIn('id', $idsPermitidos)->get()->keyBy('id');
+    // Eager load la relación para saber si un Spa es una Unidad personalizada.
+    $spasDisponibles = Spa::whereIn('id', $idsPermitidos)->with('unidad_detalle')->get();
 @endphp
 
 <header class="page-header">
@@ -91,38 +92,35 @@
 
 <main class="content">
     <div class="button-container">
+        {{-- Bucle unificado para mostrar Spas principales y Unidades personalizadas --}}
         @foreach ($spasDisponibles as $spa)
-            <a
-                href="#"
-                onclick="selectSpa('{{ strtolower($spa->nombre) }}')"
-                class="area-button"
-                title="{{ $spa->nombre }}"
-            >
-                <img src="{{ asset('images/' . strtolower($spa->nombre) . '/Logo.png') }}" alt="{{ strtoupper($spa->nombre) }}" />
-            </a>
-        @endforeach
-        @php
-            use App\Models\Unidad;
-            $spaId = session('current_spa_id');
-            $unidades = $spaId ? Unidad::where('spa_id', $spaId)->orderBy('created_at', 'desc')->get() : Unidad::orderBy('created_at', 'desc')->get();
-        @endphp
-
-        @foreach ($unidades as $unidad)
-            <a href="javascript:void(0);"
-                 onclick="selectUnidad({{ $unidad->id }})"
-                 class="area-button unidad-item"
-                 data-unidad-id="{{ $unidad->id }}"
-                 data-unidad-nombre="{{ $unidad->nombre_unidad }}"
-                 title="{{ $unidad->nombre_unidad }}"
-                 style="background: {{ $unidad->color_unidad ?? 'transparent' }};"
-            >
-                @if($unidad->logo_superior)
-                    <img src="{{ asset('storage/' . $unidad->logo_superior) }}" alt="{{ $unidad->nombre_unidad }}" />
-                @else
-                    {{-- Añadimos un estilo para que el nombre sea visible sobre el color de fondo --}}
-                    <span class="unidad-nombre" style="color: white; font-weight: bold; text-align: center;">{{ $unidad->nombre_unidad }}</span>
-                @endif
-            </a>
+            @if ($unidad = $spa->unidad_detalle)
+                {{-- Es una Unidad personalizada --}}
+                <a href="javascript:void(0);"
+                    onclick="selectUnidad({{ $unidad->id }}, event)"
+                    class="area-button unidad-item"
+                    data-unidad-id="{{ $unidad->id }}"
+                    data-unidad-nombre="{{ $unidad->nombre_unidad }}"
+                    title="{{ $unidad->nombre_unidad }}"
+                >
+                    @if($unidad->logo_superior)
+                        <img src="{{ asset($unidad->logo_superior) }}" alt="{{ $unidad->nombre_unidad }}" />
+                    @elseif($unidad->logo_unidad)
+                        <img src="{{ asset($unidad->logo_unidad) }}" alt="{{ $unidad->nombre_unidad }}" />
+                    @else
+                        {{-- No se muestra nada si no hay logos --}}
+                    @endif
+                </a>
+            @else
+                {{-- Es un Spa principal (Palacios, Princess, Pierre) --}}
+                <a href="#"
+                    onclick="selectSpa('{{ strtolower($spa->nombre) }}')"
+                    class="area-button"
+                    title="{{ $spa->nombre }}"
+                >
+                    <img src="{{ asset('images/' . strtolower($spa->nombre) . '/Logo.png') }}" alt="{{ strtoupper($spa->nombre) }}" />
+                </a>
+            @endif
         @endforeach
     </div>
 </main>
@@ -182,7 +180,7 @@
             return;
         }
 
-        fetch(`/set-unidad/${unidadId}`, {
+        fetch(`/set-unidad/${unidadId}`, { // Esta ruta llama a UnidadController@select
             method: 'POST',
             headers: {
                 'X-CSRF-TOKEN': '{{ csrf_token() }}',

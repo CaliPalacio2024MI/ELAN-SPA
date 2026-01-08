@@ -10,9 +10,7 @@ use App\Http\Controllers\UnidadController;
  */
 Route::middleware(['auth'])->group(function () {
     // Ruta para mostrar el formulario de creación de unidades
-    Route::get('/unidades/crear', function () {
-        return view('modulos.create'); // Corregido para apuntar a la vista correcta
-    })->name('unidades.create');
+    Route::get('/unidades/crear', [UnidadController::class, 'create'])->name('unidades.create');
  
     // Ruta para procesar el formulario de creación
     Route::post('/unidades', [UnidadController::class, 'store'])->name('unidades.store');

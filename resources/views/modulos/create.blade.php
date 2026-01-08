@@ -29,13 +29,6 @@
         <div style="width: 50px;"></div>
     </header>
 
-    @php
-        use App\Models\Unidad;
-        use App\Models\Spa;
-        $unidades = Unidad::orderBy('created_at', 'desc')->get();
-        $spas = Spa::all();
-    @endphp
-
     <main class="container-fluid my-auto">
         <div class="row justify-content-center g-4">
             <!-- Columna del formulario -->
@@ -63,6 +56,11 @@
                         <div class="mb-3">
                             <label class="form-label" for="color_unidad">Color de la unidad:</label>
                             <input type="color" id="color_unidad" name="color_unidad" class="form-control form-control-color" value="{{ old('color_unidad', '#000000') }}" title="Elige un color">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="logo_unidad_principal">Logo Principal de la Unidad</label>
+                            <input type="file" name="logo_unidad_principal" class="form-control-file">
                         </div>
 
                         <div class="mb-3">
