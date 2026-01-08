@@ -25,6 +25,33 @@
         }
         .context-menu li { padding: 8px 15px; cursor: pointer; }
         .context-menu li:hover { background-color: #f0f0f0; }
+
+        /* Estilos para el layout de 3 columnas cuando hay más de 5 unidades */
+        .button-container.grid-layout {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 2rem;
+            padding: 1rem 2rem;
+            max-width: 1000px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .button-container.grid-layout .area-button {
+            width: 100%;
+            height: auto;
+            padding: 0;
+            aspect-ratio: 16 / 9;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .button-container.grid-layout .area-button img {
+            max-width: 90%;
+            max-height: 90%;
+            object-fit: contain;
+        }
     </style>
 </head>
 <body>
@@ -60,6 +87,8 @@
     // Obtener colección de spas disponibles para el usuario
     // Eager load la relación para saber si un Spa es una Unidad personalizada.
     $spasDisponibles = Spa::whereIn('id', $idsPermitidos)->with('unidad_detalle')->get();
+    // Contamos el número de spas/unidades para aplicar el layout condicional
+    $cantidadSpas = $spasDisponibles->count();
 @endphp
 
 <header class="page-header">
@@ -91,7 +120,7 @@
 @endif
 
 <main class="content">
-    <div class="button-container">
+    <div class="button-container {{ $cantidadSpas > 5 ? 'grid-layout' : '' }}">
         {{-- Bucle unificado para mostrar Spas principales y Unidades personalizadas --}}
         @foreach ($spasDisponibles as $spa)
             @if ($unidad = $spa->unidad_detalle)
@@ -128,12 +157,6 @@
 <div class="contenedor-imagen">
     <img src="{{ asset('images/LOGO_MI.png') }}" alt="Logo principal" />
 </div>
-
-<!-- Menú contextual para unidades -->
-<ul id="unidad-context-menu" class="context-menu" style="display:none;">
-    <li id="context-menu-edit">Editar</li>
-    <li id="context-menu-delete">Eliminar</li>
-</ul>
 
 @include('components.alert-modal')
 

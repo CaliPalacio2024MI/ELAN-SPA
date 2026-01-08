@@ -1,0 +1,12 @@
+/* Theme para Pierre SPA */
+:root {
+    --sidebar-bg: #05755F;
+    --sidebar-hover-bg: #0D363F;
+    --icon-color: #FFFFFF;
+    --text-color: #FFFFFF;
+    --submenu-bg: #04634F;
+    --submenu-link-bg: #058C70;
+    --submenu-link-hover-bg: #06A185;
+    --logout-text-color: #E0E0E0;
+    --logout-icon-color: #FFFFFF;
+}

@@ -18,7 +18,22 @@
     
     <title>ELAN SPA & WELLNESS EXPERIENCE</title>
 
-    @yield('css') 
+    {{-- ================================================================== --}}
+    {{-- INICIO: LÓGICA CENTRALIZADA DE CARGA DE ESTILOS --}}
+    {{-- ================================================================== --}}
+
+    {{-- 1. Fuentes globales --}}
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Kumbh+Sans:wght@300;400;600;700&display=swap" rel="stylesheet">
+
+    {{-- 2. Estilos base de la aplicación cargados con Vite --}}
+    @vite(['resources/css/menus/menu_base_styles.css', 'resources/css/sabana_reservaciones/reservaciones_styles.css', 'resources/css/ModalAviso/modal_aviso_individual.css'])
+
+    {{-- 3. Inclusión del tema dinámico (desde la BD) o estático (desde archivo) --}}
+    @include('layouts.dynamic-styles')
+
+    {{-- 4. Espacio para que cada página pueda añadir sus propios estilos específicos si es necesario --}}
+    @yield('css')
 </head>
 <body class="sidebar-hover">
     @php

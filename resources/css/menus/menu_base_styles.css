@@ -1,10 +1,29 @@
+/*
+ * Este es el archivo base para la estructura del menú.
+ * Utiliza variables CSS (ej: var(--sidebar-bg)) que serán definidas
+ * por los archivos de tema de cada spa o por el tema por defecto.
+ */
+
+/* Valores por defecto (fallback) por si alguna variable no se define en el tema */
+:root {
+    --sidebar-bg: #249C9A;
+    --sidebar-hover-bg: #1A7472;
+    --icon-color: #F3E3D0;
+    --text-color: #FFFFFF;
+    --submenu-bg: #6FC7C5;
+    --submenu-link-bg: #1A7472;
+    --submenu-link-hover-bg: #6FC7C5;
+    --logout-text-color: #E0E0E0;
+    --logout-icon-color: #E0E0E0;
+}
+
 .sidebar {
     position: fixed;
     left: 0;
-    top: 0; 
-    width: 70px; 
-    height: 100vh; 
-    background-color: #033e59; 
+    top: 0;
+    width: 70px;
+    height: 100vh;
+    background-color: var(--sidebar-bg);
     box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
     box-sizing: border-box;
     transition: width 0.3s ease;
@@ -27,7 +46,6 @@
     height: 70px;
     margin-bottom: 55px; 
     transition: height 0.3s ease, margin 0.3s ease;
-    
 }
 
 .sidebar .logo img {
@@ -48,12 +66,10 @@
     padding: 0;
     margin: 40px 0 0 0;
     width: 100%;
-    
 }
 
 .sidebar li {
     width: 100%;
-
 }
 
 .sidebar a {
@@ -61,22 +77,21 @@
     align-items: center;
     text-decoration: none;
     padding: 15px;
-    color: #E0E0E0; 
+    color: var(--text-color);
     font-size: 16px;
     width: 100%;
     transition: background-color 0.3s ease, color 0.3s ease;
     white-space: nowrap;
     overflow: hidden;
-    text-overflow: ellipsis;
-    
+    text-overflow: ellipsis; 
 }
 
 .sidebar a i {
     font-size: 20px;
     width: 40px;
     text-align: center;
-    color: #E0E0E0; 
-    flex-shrink: 0; 
+    color: var(--icon-color);
+    flex-shrink: 0;
 }
 
 .sidebar a span {
@@ -93,7 +108,7 @@
 }
 
 .sidebar a:hover {
-    background-color: #3989b5; 
+    background-color: var(--sidebar-hover-bg); 
     color: white;
 }
 
@@ -101,11 +116,11 @@
     list-style: none;
     padding: 0;
     margin: 0;
-    display: none; 
-    background: #0a3d5f;
-    min-height: 0 !important; 
-    padding: 0 !important; 
-    margin: 0 !important; 
+    display: none;
+    background: var(--submenu-bg); 
+    min-height: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
 }
 
 .menu-item:hover .submenu {
@@ -122,13 +137,13 @@
     display: block;
     text-decoration: none;
     color: #E0E0E0;
-    font-size: 14px;
+    font-size: 14px; 
     transition: background-color 0.3s ease;
-    background: #105b89;
+    background: var(--submenu-link-bg); 
 }
 
 .submenu a:hover {
-    background-color: #3989b5;
+    background-color: var(--submenu-link-hover-bg); 
 }
 
 .sidebar-decoration {
@@ -140,7 +155,6 @@
     background-size: cover;
     background-position: center;
     background-repeat: no-repeat;
-    
 }
 
 .sidebar:hover .logout-form button span {
@@ -151,16 +165,17 @@
     opacity: 0;
     margin-left: 15px;
     font-size: 16px;
+    flex: 1;
     text-align: left;
     transition: opacity 0.3s ease-in-out;
 }
 
-
 .logout-form {
-    position: absolute;  
+    position: absolute;
     bottom: 20px;  
     left: 0;
     width: 100%;  
+    display: flex;
     justify-content: center;
     align-items: center;
     padding: 10px 0;
@@ -171,7 +186,7 @@
     align-items: center;
     background: none;
     border: none;
-    color: #E0E0E0; 
+    color: var(--logout-text-color);
     font-size: 16px;
     width: 100%;
     padding: 15px;
@@ -183,12 +198,12 @@
 .logout-form button i {
     font-size: 20px;
     width: 40px;
-    text-align: center;
-    color: #E0E0E0; 
+    text-align: center; 
+    color: var(--logout-icon-color);
     flex-shrink: 0;
 }
 
 .logout-form button:hover {
-    background-color: #3989b5; 
+    background-color: var(--sidebar-hover-bg); 
     color: white;
 }

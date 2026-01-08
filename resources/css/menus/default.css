@@ -1,0 +1,17 @@
+/*
+ * Tema por defecto para nuevas unidades de negocio.
+ * Este archivo se cargará automáticamente si no se encuentra un
+ * tema específico para el SPA o si no hay un tema dinámico en sesión.
+ */
+:root {
+    /* Variables del Menú */
+    --sidebar-bg: #033e59;
+    --sidebar-hover-bg: #3989b5;
+    --icon-color: #E0E0E0;
+    --text-color: #E0E0E0;
+    --submenu-bg: #0a3d5f;
+    --submenu-link-bg: #105b89;
+    --submenu-link-hover-bg: #3989b5;
+    --logout-text-color: #E0E0E0;
+    --logout-icon-color: #E0E0E0; /* Añadido para consistencia */
+}

@@ -30,9 +30,10 @@ Route::post('/set-spa/{spa}', function ($spa) {
             'current_spa' => strtolower($spaModel->nombre),
             'current_spa_id' => $spaModel->id
         ]);
-        // Limpiamos el color de la unidad si se selecciona un spa principal,
-        // para que no se aplique el color de una unidad seleccionada previamente.
-        session()->forget('current_unidad_color');
+        // Al seleccionar un spa principal, debemos limpiar cualquier tema de unidad personalizada
+        // que pudiera estar en la sesión para que se apliquen los estilos CSS correctos del spa.
+        session()->forget('current_unidad_theme'); // Nueva variable de tema (array).
+        session()->forget('current_unidad_color'); // Variable antigua (por si acaso).
     }
     return response()->noContent();
 });

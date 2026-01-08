@@ -19,15 +19,18 @@ class AnfitrionController extends Controller
     // Lista anfitriones del spa actual y prepara datos para la vista
     public function index(Request $request)
     {
-        $spaNombre = session('current_spa');
-
-        if (!in_array($spaNombre, ['palacio', 'princess', 'pierre'])) {
-            return abort(403, 'No se encontró un spa válido en la base de datos.');
+        // Obtenemos el ID del spa/unidad directamente de la sesión.
+        // Esto funciona tanto para los spas principales como para las unidades nuevas.
+        $spaId = session('current_spa_id');
+ 
+        if (!$spaId) {
+            return abort(403, 'No se ha seleccionado una unidad de negocio válida.');
         }
-
-        $spa = Spa::where('nombre', $spaNombre)->first();
+ 
+        // Buscamos el spa/unidad por su ID.
+        $spa = Spa::find($spaId);
         if (!$spa) {
-            return abort(403, 'No se encontró el spa en la base de datos.');
+            return abort(403, 'La unidad de negocio seleccionada no fue encontrada en la base de datos.');
         }
 
         // Obtiene anfitriones del spa excepto rol master, con datos operativos cargados
@@ -71,8 +74,6 @@ class AnfitrionController extends Controller
                 : json_decode($anfitrion->accesos, true) ?? [];
             $anfitrion->spaNombres = Spa::whereIn('id', $ids)->pluck('nombre')->toArray();
         }
-
-        $spaId = $spa->id;
 
         // Obtiene clases únicas de experiencias asociadas al spa actual
         $clasesDesdeExperiencias = Experience::where('spa_id', $spaId)

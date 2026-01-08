@@ -1,0 +1,12 @@
+/* Theme para Princess SPA */
+:root {
+    --sidebar-bg: #249C9A;
+    --sidebar-hover-bg: #1A7472;
+    --icon-color: #F3E3D0;
+    --text-color: #FFFFFF;
+    --submenu-bg: #6FC7C5;
+    --submenu-link-bg: #1A7472;
+    --submenu-link-hover-bg: #6FC7C5;
+    --logout-text-color: #E0E0E0;
+    --logout-icon-color: #E0E0E0;
+}

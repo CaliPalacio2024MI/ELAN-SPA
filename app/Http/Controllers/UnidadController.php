@@ -6,6 +6,8 @@ use App\Models\Unidad;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use App\Models\Anfitrion;
+use Illuminate\Database\QueryException;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
 
@@ -35,6 +37,11 @@ class UnidadController extends Controller
             'logo_unidad_superior' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
             'logo_unidad_principal' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
             'logo_unidad_inferior' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
+            'color_icon' => 'nullable|string|max:7',
+            'color_text' => 'nullable|string|max:7',
+            // Añadimos validación para los nuevos colores de logout
+            'color_logout_text_color' => 'nullable|string|max:7',
+            'color_logout_icon_color' => 'nullable|string|max:7',
         ]);
  
         DB::beginTransaction();
@@ -56,11 +63,27 @@ class UnidadController extends Controller
                 }
             }
 
+            // --- INICIO: Cálculo automático de colores del tema ---
+            $baseColor = $validated['color_unidad'];
+            $hoverColor = $this->adjust_color_brightness($baseColor, -0.30); // 30% más oscuro
+            $submenuLinkColor = $this->adjust_color_brightness($baseColor, 0.15); // 15% más claro
+            // --- FIN: Cálculo automático de colores del tema ---
+
             // 3. Preparar los datos para la tabla 'unidades', usando el ID del nuevo spa.
             $data = [
                 'nombre_unidad' => $validated['nombre_unidad'],
                 'color_unidad' => $validated['color_unidad'],
                 'spa_id' => $newSpa->id,
+                'color_sidebar_bg' => $baseColor,
+                'color_sidebar_hover_bg' => $hoverColor,
+                'color_icon' => $validated['color_icon'] ?? null,
+                'color_text' => $validated['color_text'] ?? null,
+                'color_submenu_bg' => $baseColor,
+                'color_submenu_link_bg' => $submenuLinkColor,
+                'color_submenu_link_hover_bg' => $hoverColor,
+                // Añadimos los nuevos colores a los datos para guardar
+                'color_logout_text_color' => $validated['color_logout_text_color'] ?? null,
+                'color_logout_icon_color' => $validated['color_logout_icon_color'] ?? null,
             ];
  
             $this->handleLogoUpload($request, 'logo_unidad_superior', $data, 'logo_superior');
@@ -105,6 +128,11 @@ class UnidadController extends Controller
             'logo_unidad_superior' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
             'logo_unidad_principal' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
             'logo_unidad_inferior' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
+            'color_icon' => 'nullable|string|max:7',
+            'color_text' => 'nullable|string|max:7',
+            // Añadimos validación para los nuevos colores de logout
+            'color_logout_text_color' => 'nullable|string|max:7',
+            'color_logout_icon_color' => 'nullable|string|max:7',
         ]);
  
         DB::beginTransaction();
@@ -112,9 +140,25 @@ class UnidadController extends Controller
             // Buscar el spa asociado para actualizar su nombre también.
             $spa = \App\Models\Spa::find($unidad->spa_id);
 
+            // --- INICIO: Cálculo automático de colores del tema ---
+            $baseColor = $validated['color_unidad'];
+            $hoverColor = $this->adjust_color_brightness($baseColor, -0.30); // 30% más oscuro
+            $submenuLinkColor = $this->adjust_color_brightness($baseColor, 0.15); // 15% más claro
+            // --- FIN: Cálculo automático de colores del tema ---
+
             $data = [
                 'nombre_unidad' => $validated['nombre_unidad'],
                 'color_unidad' => $validated['color_unidad'],
+                'color_sidebar_bg' => $baseColor,
+                'color_sidebar_hover_bg' => $hoverColor,
+                'color_icon' => $validated['color_icon'] ?? null,
+                'color_text' => $validated['color_text'] ?? null,
+                'color_submenu_bg' => $baseColor,
+                'color_submenu_link_bg' => $submenuLinkColor,
+                'color_submenu_link_hover_bg' => $hoverColor,
+                // Añadimos los nuevos colores a los datos para actualizar
+                'color_logout_text_color' => $validated['color_logout_text_color'] ?? null,
+                'color_logout_icon_color' => $validated['color_logout_icon_color'] ?? null,
             ];
  
             $this->handleLogoUpload($request, 'logo_unidad_superior', $data, 'logo_superior', $unidad);
@@ -139,43 +183,60 @@ class UnidadController extends Controller
     // Elimina una unidad
     public function destroy(Unidad $unidad)
     {
+        // Primero, obtenemos toda la información necesaria del modelo antes de eliminarlo.
+        $spaIdToDelete = $unidad->spa_id;
+        $slug = Str::slug($unidad->nombre_unidad);
+        $directoryPath = "images/{$slug}";
+
         DB::beginTransaction();
         try {
-            // Buscar el spa asociado para eliminarlo también.
-            $spaIdToDelete = $unidad->spa_id;
-            $spa = \App\Models\Spa::find($unidad->spa_id);
-
-            // Eliminar logos si existen
-            if ($unidad->logo_unidad) Storage::disk('public_path')->delete($unidad->logo_unidad);
-            if ($unidad->logo_superior) Storage::disk('public_path')->delete($unidad->logo_superior);
-            if ($unidad->logo_inferior) {
-                Storage::disk('public_path')->delete($unidad->logo_inferior);
-            }
-
-            // Eliminar la unidad.
-            $unidad->delete();
-
-            // Eliminar el spa asociado, si existe.
-            if ($spa) {
-                // Antes de eliminar el spa, quitar el ID de los accesos de todos los usuarios.
-                $usersToUpdate = \App\Models\User::whereJsonContains('accesos', $spaIdToDelete)->get();
-                foreach ($usersToUpdate as $user) {
-                    $accesos = array_filter($user->accesos, fn($id) => $id != $spaIdToDelete);
+            // 1. Revocar acceso a todos los usuarios que tuvieran esta unidad/spa.
+            if ($spaIdToDelete) {
+                // Se corrige el modelo a Anfitrion, que es el que contiene la columna 'accesos'.
+                // El modelo User genérico no tiene esta columna.
+                $anfitrionesToUpdate = Anfitrion::whereJsonContains('accesos', $spaIdToDelete)->get();
+                foreach ($anfitrionesToUpdate as $user) { // 'user' aquí es una instancia de Anfitrion
+                    $accesos = is_array($user->accesos) ? $user->accesos : (json_decode($user->accesos, true) ?? []);
+                    $accesos = array_filter($accesos, fn($id) => $id != $spaIdToDelete);
                     $user->accesos = array_values($accesos); // Re-indexar el array
                     $user->save();
                 }
-                $spa->delete();
             }
 
+            // 2. Eliminar la unidad (el registro "hijo").
+            // Esto es crucial y debe hacerse ANTES de intentar eliminar el spa para evitar
+            // errores de restricción de clave foránea.
+            $unidad->delete();
+
+            // 3. Eliminar el registro del spa (el registro "padre").
+            // Ahora que la unidad ha sido eliminada, podemos eliminar el spa de forma segura.
+            $spa = \App\Models\Spa::find($spaIdToDelete);
+            if ($spa) {
+                $spa->delete();
+            }
+ 
+            // 4. Eliminar el directorio de logos del almacenamiento.
+            Storage::disk('public_path')->deleteDirectory($directoryPath);
+ 
             DB::commit();
             return response()->json(['success' => true, 'message' => 'Unidad eliminada correctamente.']);
         } catch (\Exception $e) {
             DB::rollBack();
-            Log::error('Error al eliminar unidad: ' . $e->getMessage());
-            if (str_contains($e->getMessage(), 'foreign key constraint fails')) {
-                return response()->json(['success' => false, 'message' => 'No se pudo eliminar la unidad porque tiene datos asociados (como reservaciones).'], 500);
+            // Logueamos la excepción completa para tener más detalles en los logs del sistema.
+            Log::error("Error al intentar eliminar la unidad ID {$unidad->id}", ['exception' => $e]);
+
+            // Verificamos de forma más robusta si el error es una violación de restricción de clave foránea.
+            // El código de error '23000' es el estándar SQLSTATE para "integrity constraint violation".
+            if ($e instanceof QueryException && $e->getCode() === '23000') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No se pudo eliminar la unidad porque tiene datos asociados (como anfitriones, reservaciones, etc.). Por favor, elimine esos datos primero.'
+                ], 500);
             }
-            return response()->json(['success' => false, 'message' => 'No se pudo eliminar la unidad.'], 500);
+
+            // Si no es un error de FK, devolvemos el mensaje específico de la excepción.
+            // Esto ayudará a identificar el problema real (ej. permisos de archivo, etc.).
+            return response()->json(['success' => false, 'message' => 'Ocurrió un error inesperado: ' . $e->getMessage()], 500);
         }
     }
 
@@ -191,11 +252,28 @@ class UnidadController extends Controller
         $spaModel = \App\Models\Spa::find($unidad->spa_id);
 
         if ($spaModel) {
+            // 1. Crear un array con todos los colores del tema desde el modelo de la unidad
+            $themeColors = [
+                'sidebar_bg' => $unidad->color_sidebar_bg,
+                'sidebar_hover_bg' => $unidad->color_sidebar_hover_bg,
+                'icon_color' => $unidad->color_icon,
+                'text_color' => $unidad->color_text,
+                'submenu_bg' => $unidad->color_submenu_bg,
+                'submenu_link_bg' => $unidad->color_submenu_link_bg,
+                'submenu_link_hover_bg' => $unidad->color_submenu_link_hover_bg,
+                // Añadimos los nuevos colores al tema que se guarda en sesión
+                'logout_text_color' => $unidad->color_logout_text_color,
+                'logout_icon_color' => $unidad->color_logout_icon_color,
+            ];
+
+            // 2. Guardar el array completo del tema en la sesión
             session([
                 'current_spa' => strtolower($spaModel->nombre),
                 'current_spa_id' => $spaModel->id,
-                'current_unidad_color' => $unidad->color_unidad, // Guardamos el color para el menú
+                'current_unidad_theme' => $themeColors, // Guardamos el array del tema
             ]);
+
+            session()->forget('current_unidad_color'); // Eliminamos la variable antigua
             return response()->json(['success' => true, 'message' => 'Unidad seleccionada.']);
         }
 
@@ -228,15 +306,12 @@ class UnidadController extends Controller
                     Storage::disk('public_path')->delete($unidad->{$dataKey});
                 }
 
-                // Definimos el nombre del archivo según la clave
-                $fileName = 'default.png';
-                if ($dataKey === 'logo_superior') {
-                    $fileName = 'logo.png';
-                } elseif ($dataKey === 'logo_inferior') {
-                    $fileName = 'decorativo.png';
-                } elseif ($dataKey === 'logo_unidad') {
-                    $fileName = 'logounidad.png';
-                }
+                $fileName = match ($dataKey) {
+                    'logo_superior' => 'logo.png',
+                    'logo_inferior' => 'decorativo.png',
+                    'logo_unidad'   => 'logounidad.png',
+                    default         => 'default.png',
+                };
 
                 // Guardar el nuevo archivo y obtener su ruta.
                 $path = $request->file($fileKey)->storeAs($directory, $fileName, 'public_path');
@@ -248,5 +323,38 @@ class UnidadController extends Controller
                 throw $e;
             }
         }
+    }
+
+    /**
+     * Ajusta el brillo de un color hexadecimal.
+     *
+     * @param string $hex El color en formato hexadecimal (ej. #RRGGBB).
+     * @param float $percent El porcentaje de ajuste (-1.0 a 1.0).
+     *                        Valores negativos oscurecen, positivos aclaran.
+     * @return string El nuevo color en formato hexadecimal.
+     */
+    private function adjust_color_brightness(string $hex, float $percent): string
+    {
+        $hex = ltrim($hex, '#');
+        if (strlen($hex) == 3) {
+            $hex = $hex[0] . $hex[0] . $hex[1] . $hex[1] . $hex[2] . $hex[2];
+        }
+        
+        if (strlen($hex) != 6) {
+            return '#' . $hex; // Retorna original si es inválido
+        }
+
+        $rgb = array_map('hexdec', str_split($hex, 2));
+
+        foreach ($rgb as &$color) {
+            $change = $percent > 0 
+                ? (255 - $color) * $percent  // Aclarar (distancia hacia el blanco)
+                : $color * $percent;         // Oscurecer (distancia hacia el negro)
+
+            $color = round($color + $change);
+            $color = max(0, min(255, $color)); // Asegurar que el valor esté en el rango 0-255
+        }
+
+        return '#' . implode('', array_map(fn($c) => str_pad(dechex($c), 2, '0', STR_PAD_LEFT), $rgb));
     }
 }
