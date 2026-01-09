@@ -122,7 +122,19 @@ class ReservationController extends Controller
         try {
             $validated = $request->validate([
                 'cliente_existente_id' => 'nullable|exists:clients,id',
-                'correo_cliente' => 'required|email',
+                'correo_cliente' => [
+                    'required',
+                    'email',
+                    function ($attribute, $value, $fail) use ($request) {
+                        // Si no se está usando un cliente existente (se va a crear uno nuevo),
+                        // verificar que el correo no esté ya en uso por otro cliente.
+                        if (!$request->input('cliente_existente_id')) {
+                            if (Client::where('correo', $value)->exists()) {
+                                $fail('Ya existe un cliente con este correo electrónico. Por favor, busque y seleccione el cliente existente.');
+                            }
+                        }
+                    }
+                ],
                 'nombre_cliente' => 'required_without:cliente_existente_id|string|max:255',
                 'apellido_paterno_cliente' => 'required_without:cliente_existente_id|string|max:255',
                 'apellido_materno_cliente' => 'nullable|string|max:255',
@@ -485,27 +497,25 @@ class ReservationController extends Controller
         };
 
         $requiredName = $normalize($experience->nombre);
-        $requiredClass = $normalize($experience->clase);
         
         $anfitrionClasses = $newAnfitrion->operativo->clases_actividad ?? [];
         $normalizedAnfitrionClasses = array_map($normalize, $anfitrionClasses);
 
-        $isQualified = in_array($requiredClass, $normalizedAnfitrionClasses) || in_array($requiredName, $normalizedAnfitrionClasses);
+        $isQualified = in_array($requiredName, $normalizedAnfitrionClasses);
 
         // --- DEBUGGING ---
         Log::debug('--- Calificación de Anfitrión D&D (Lógica flexible) ---');
         Log::debug("Reservación ID: {$id}");
         Log::debug("Anfitrión a verificar ID: {$newAnfitrion->id}");
-        Log::debug("Clase requerida (normalizada): '{$requiredClass}'");
         Log::debug("Nombre requerido (normalizado): '{$requiredName}'");
         Log::debug("Clases del anfitrión (normalizadas): " . implode(', ', $normalizedAnfitrionClasses));
         Log::debug("Resultado de calificación: " . ($isQualified ? 'CALIFICADO' : 'NO CALIFICADO'));
         // --- FIN DEBUGGING ---
 
         if (!$isQualified) {
-            Log::warning("VALIDACIÓN FALLIDA: Anfitrión no posee la clase '{$requiredClass}' ni el nombre '{$requiredName}'.");
+            Log::warning("VALIDACIÓN FALLIDA: Anfitrión no posee la especialidad '{$requiredName}'.");
             return response()->json([
-                'error' => 'El anfitrión no está calificado para realizar esta experiencia.'
+                'error' => "El anfitrión no está calificado para realizar la experiencia '{$experience->nombre}'."
             ], 422);
         }
 
@@ -661,7 +671,19 @@ class ReservationController extends Controller
 
             $validador = Validator::make($r, [
                 'cliente_existente_id' => 'nullable|exists:clients,id',
-                'correo_cliente' => 'required|email',
+                'correo_cliente' => [
+                    'required',
+                    'email',
+                    function ($attribute, $value, $fail) use ($r) {
+                        // Si no se está usando un cliente existente (se va a crear uno nuevo),
+                        // verificar que el correo no esté ya en uso por otro cliente.
+                        if (empty($r['cliente_existente_id'])) {
+                            if (Client::where('correo', $value)->exists()) {
+                                $fail('Ya existe un cliente con este correo electrónico. Por favor, busque y seleccione el cliente existente.');
+                            }
+                        }
+                    }
+                ],
                 'nombre_cliente' => 'required_without:cliente_existente_id|string|max:255',
                 'apellido_paterno_cliente' => 'required_without:cliente_existente_id|string|max:255',
                 'apellido_materno_cliente' => 'nullable|string|max:255',
@@ -1157,8 +1179,7 @@ class ReservationController extends Controller
         $experiences = Experience::where('spa_id', $spa->id)
             ->where('activo', true)
             ->where(function ($query) use ($clases) {
-                $query->whereIn('clase', $clases)
-                      ->orWhereIn('nombre', $clases);
+                $query->whereIn('nombre', $clases);
             })
             ->get()
             ->map(function ($experience) {

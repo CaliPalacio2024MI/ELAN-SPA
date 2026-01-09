@@ -679,7 +679,7 @@ class ReportController extends Controller
 
                     $sales = $salesQuery->get();
 
-                    $content .= '<th>Terapeuta</th><th>Servicio</th><th>Fecha</th><th>Cliente</th><th>Propina</th><th>IVA Propina</th></tr></thead><tbody>';
+                    $content .= '<th>Terapeuta</th><th>Servicio</th><th>Fecha</th><th>Cliente</th><th>Propina</th><th>IVA</th><th>% de comision</th><th>Comisión</th></tr></thead><tbody>';
 
                     foreach ($sales as $sale) {
                         $r = $sale->reservacion;
@@ -698,8 +698,11 @@ class ReportController extends Controller
                                     : 'N/D';
 
                         $propina = floatval($sale->propina ?: 0);
-                        // Obtener la tasa desde el archivo de configuración.
-                        $iva_propina = $propina * config('finance.tax_rates.tip_iva', 0.16);
+                        // El IVA ahora se calcula sobre el subtotal de la venta, no sobre la propina.
+                        $tasaIva = config('finance.tax_rates.iva', 0.16);
+                        $iva_servicio = $sale->subtotal * $tasaIva;
+                        $comision_porcentaje = $anf ? $anf->porcentaje_servicio : 0;
+                        $comision_monto = ($sale->subtotal * $comision_porcentaje) / 100;
 
                         $content .= "<tr>";
                         $content .= "<td>" . htmlspecialchars($terName) . "</td>";
@@ -707,7 +710,9 @@ class ReportController extends Controller
                         $content .= "<td>" . ($r->fecha ?? $sale->created_at->format('Y-m-d')) . "</td>";
                         $content .= "<td>" . htmlspecialchars($cliente) . "</td>";
                         $content .= "<td>$" . number_format($propina, 2) . "</td>";
-                        $content .= "<td>$" . number_format($iva_propina, 2) . "</td>";
+                        $content .= "<td>$" . number_format($iva_servicio, 2) . "</td>";
+                        $content .= "<td>" . number_format($comision_porcentaje, 2) . "%</td>";
+                        $content .= "<td>$" . number_format($comision_monto, 2) . "</td>";
                         $content .= "</tr>";
                     }
                 break;
@@ -865,6 +870,20 @@ class ReportController extends Controller
                 if (!is_null($activo)) {
                     $q->where('activo', $activo);
                 }
+
+                // Añadir filtro por servicio si está presente
+                if ($servicio) {
+                    $experience = Experience::find($servicio);
+                    if ($experience) {
+                        $experienceName = $experience->nombre;                        
+                        $q->whereHas('operativo', function ($oq) use ($experienceName) {
+                            $oq->where(function ($subQuery) use ($experienceName) {
+                                $subQuery->whereJsonContains('clases_actividad', $experienceName);
+                            });
+                        });
+                    }
+                }
+
                 if ($searchTerm) {
                     $q->where(function($query) use ($searchTerm) {
                         $query->where(DB::raw("LOWER(CONCAT_WS(' ', nombre_usuario, apellido_paterno, apellido_materno))"), 'like', "%{$searchTerm}%");
@@ -961,29 +980,46 @@ class ReportController extends Controller
                 }
                 
                 $ventasExp = $ventasQuery->get();
-
+                
+                // Agrupar ventas por fecha para poder calcular totales diarios
+                $ventasPorDia = $ventasExp->map(function ($venta) {
+                    $reservacion = $venta->reservacion;
+                    if (!$reservacion && $venta->grupo_reserva_id && $venta->grupoReserva->reservaciones->isNotEmpty()) {
+                        $reservacion = $venta->grupoReserva->reservaciones->firstWhere('es_principal', true)
+                            ?? $venta->grupoReserva->reservaciones->sortBy('fecha')->sortBy('hora')->first();
+                    }
+                    $venta->fecha_reporte = $reservacion ? $reservacion->fecha : $venta->created_at->format('Y-m-d');
+                    return $venta;
+                })->groupBy('fecha_reporte')->sortKeys();
+                
                 $content .= '<th>Fecha</th><th>Tipo</th><th>Vendedor</th><th>Subtotal</th><th>IVA</th><th>Propina</th><th>Total</th></tr></thead><tbody>';
 
-                foreach ($ventasExp as $v) {
-                    $reservacion = $v->reservacion;
-                    if (!$reservacion && $v->grupo_reserva_id && $v->grupoReserva->reservaciones->isNotEmpty()) {
-                        $reservacion = $v->grupoReserva->reservaciones->firstWhere('es_principal', true)
-                            ?? $v->grupoReserva->reservaciones->sortBy('fecha')->sortBy('hora')->first();
+                foreach ($ventasPorDia as $fechaDia => $ventasDelDia) {
+                    $totalDia = 0;
+                    foreach ($ventasDelDia as $v) {
+                        $reservacion = $v->reservacion;
+                        if (!$reservacion && $v->grupo_reserva_id && $v->grupoReserva->reservaciones->isNotEmpty()) {
+                            $reservacion = $v->grupoReserva->reservaciones->firstWhere('es_principal', true)
+                                ?? $v->grupoReserva->reservaciones->sortBy('fecha')->sortBy('hora')->first();
+                        }
+
+                        $vendedor = $reservacion && $reservacion->anfitrion ? ($reservacion->anfitrion->nombre_usuario . ' ' . ($reservacion->anfitrion->apellido_paterno ?? '') . ' ' . ($reservacion->anfitrion->apellido_materno ?? '')) : 'N/D';
+                        $tipoVenta = $reservacion && $reservacion->experiencia ? $reservacion->experiencia->nombre : 'Experiencia';
+                        $totalVenta = floatval($v->total ?? 0);
+                        $totalDia += $totalVenta;
+
+                        $content .= "<tr>";
+                        $content .= "<td>{$v->fecha_reporte}</td>";
+                        $content .= "<td>" . htmlspecialchars($tipoVenta) . "</td>";
+                        $content .= "<td>" . htmlspecialchars($vendedor) . "</td>";
+                        $content .= "<td>$" . number_format(floatval($v->subtotal ?? 0), 2) . "</td>";
+                        $content .= "<td>$" . number_format(floatval($v->impuestos ?? 0), 2) . "</td>";
+                        $content .= "<td>$" . number_format(floatval($v->propina ?? 0), 2) . "</td>";
+                        $content .= "<td>$" . number_format($totalVenta, 2) . "</td>";
+                        $content .= "</tr>";
                     }
-
-                    $fecha = $reservacion ? $reservacion->fecha : $v->created_at->format('Y-m-d');
-                    $vendedor = $reservacion && $reservacion->anfitrion ? ($reservacion->anfitrion->nombre_usuario . ' ' . ($reservacion->anfitrion->apellido_paterno ?? '') . ' ' . ($reservacion->anfitrion->apellido_materno ?? '')) : 'N/D';
-                    $tipoVenta = $reservacion && $reservacion->experiencia ? $reservacion->experiencia->nombre : 'Experiencia';
-
-                    $content .= "<tr>";
-                    $content .= "<td>{$fecha}</td>";
-                    $content .= "<td>" . htmlspecialchars($tipoVenta) . "</td>";
-                    $content .= "<td>" . htmlspecialchars($vendedor) . "</td>";
-                    $content .= "<td>$" . number_format(floatval($v->subtotal ?? 0), 2) . "</td>";
-                    $content .= "<td>$" . number_format(floatval($v->impuestos ?? 0), 2) . "</td>";
-                    $content .= "<td>$" . number_format(floatval($v->propina ?? 0), 2) . "</td>";
-                    $content .= "<td>$" . number_format(floatval($v->total ?? 0), 2) . "</td>";
-                    $content .= "</tr>";
+                    // Separador con el total del día
+                    $content .= "<tr><td colspan='6' style='text-align: right; font-weight: bold;'>Total del día " . Carbon::parse($fechaDia)->format('d/m/Y') . ":</td><td style='font-weight: bold;'>$" . number_format($totalDia, 2) . "</td></tr>";
                 }
                 break;
 
