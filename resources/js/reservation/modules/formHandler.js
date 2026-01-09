@@ -2,6 +2,7 @@
 
 import { TableLoader } from './tableLoader.js';
 import { ModalHandler } from './modalHandler.js';
+import { GrupoReservasHandler } from './grupoReservasHandler.js';
 import { Alerts } from '@/utils/alerts.js';
 import { ModalAlerts } from '@/utils/modalAlerts.js';
 
@@ -29,7 +30,7 @@ export const ReservationFormHandler = {
         form.addEventListener("submit", this.handleSubmit);
         this.bindInputs();
         this.setupBuscarCliente();
-        this.setupGrupoReservas();
+        GrupoReservasHandler.init();
         this.setupFiltradoPorExperienciaYFecha();
         this.setupActualizarHoras();
 
@@ -37,8 +38,8 @@ export const ReservationFormHandler = {
         const anfitrionSelectEdit = document.getElementById("anfitrion_id_select");
         anfitrionSelectEdit?.addEventListener('change', (e) => {
             const form = document.getElementById('reservationForm');
-            // No preservar el valor de la experiencia al cambiar de anfitrión manualmente
-            this.filtrarExperienciasPorAnfitrion(e.target.value, form, false);
+            // Al cambiar de anfitrión, filtrar las experiencias y preservar la selección si sigue siendo válida.
+            this.filtrarExperienciasPorAnfitrion(e.target.value, form, true);
         });
     },
 
@@ -286,200 +287,6 @@ export const ReservationFormHandler = {
         });
     },
 
-    // Configura generación dinámica de formularios para acompañantes
-    setupGrupoReservas() {
-        const generarBtn = document.getElementById("generarReservasBtn");
-        const cantidadInput = document.getElementById("cantidadReservas");
-        const container = document.getElementById("grupoReservasContainer");
-        const template = document.getElementById("reservaExtraTemplate");
-
-        if (!generarBtn || !cantidadInput || !container || !template) return;
-
-        generarBtn.addEventListener("click", () => {
-            const cantidad = parseInt(cantidadInput.value);
-            if (isNaN(cantidad) || cantidad < 0 || cantidad > 10) {
-                ModalAlerts.show("Ingresa una cantidad válida entre 0 y 10.", { type: "warning", autoClose: 4000 });
-                return;
-            }
-
-            container.innerHTML = ""; // Limpia contenedor antes de agregar
-
-            for (let i = 0; i < cantidad; i++) {
-                const clone = template.content.cloneNode(true);
-                const html = clone.querySelector(".reserva-extra").innerHTML.replace(/__INDEX__/g, i);
-                const wrapper = document.createElement("div");
-                wrapper.className = "reserva-extra bg-cliente p-3 my-3 rounded border border-secondary position-relative";
-                wrapper.innerHTML = html;
-
-                container.appendChild(wrapper);
-                ReservationFormHandler.populateSelects(wrapper);
-
-                // Listener para filtrar experiencias cuando cambia el anfitrión en el form de acompañante
-                wrapper.querySelector(`[name*='anfitrion_id']`)?.addEventListener('change', (e) => {
-                    // No preservar el valor de la experiencia al cambiar de anfitrión manualmente
-                    ReservationFormHandler.filtrarExperienciasPorAnfitrion(e.target.value, wrapper, false);
-                });
-
-                // Agrega listeners para actualizar cabinas, anfitriones y horas disponibles dinámicamente
-                ['experiencia_id', 'fecha'].forEach(campo => {
-                    wrapper.querySelector(`[name*='${campo}']`)?.addEventListener('change', () => {
-                        ReservationFormHandler.filtrarCabinasYAnfitriones(wrapper);
-                        ReservationFormHandler.actualizarHorasDisponibles(wrapper);
-                    });
-                });
-
-                ['cabina_id', 'anfitrion_id'].forEach(campo => {
-                    wrapper.querySelector(`[name*='${campo}']`)?.addEventListener('change', () => {
-                        ReservationFormHandler.actualizarHorasDisponibles(wrapper);
-                    });
-                });
-
-                ['fecha', 'experiencia_id', 'anfitrion_id', 'cabina_id'].forEach(campo => {
-                    wrapper.querySelector(`[name*='${campo}']`)?.addEventListener('change', () => {
-                        ReservationFormHandler.actualizarHorasDisponibles(wrapper);
-                    });
-                });
-
-                // Botón para remover formulario de acompañante
-                const removeBtn = wrapper.querySelector(".remove-reserva-btn");
-                removeBtn?.addEventListener("click", () => wrapper.remove());
-            }
-        });
-
-        // Evento delegación para buscar clientes en formularios de acompañantes
-        document.addEventListener("click", async function (e) {
-            const btn = e.target.closest(".buscar-cliente-extra");
-            if (!btn) return;
-
-            const wrapper = btn.closest(".reserva-extra");
-            if (!wrapper) {
-                return;
-            }
-
-            const inputCorreo = wrapper.querySelector(".correo-cliente");
-            const correo = inputCorreo?.value.trim();
-
-            if (!correo) {
-                ModalAlerts.show("Ingresa un correo válido.", { type: "warning", title: "Atención" });
-                return;
-            }
-
-            try {
-                const response = await fetch('/buscar-cliente', {
-                    method: 'POST',
-                    headers: {
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
-                        'Content-Type': 'application/json',
-                        'Accept': 'application/json'
-                    },
-                    body: JSON.stringify({ correo })
-                });
-
-                const data = await response.json();
-
-                if (response.ok && data.success) {
-                    wrapper.querySelector(".cliente-id-existente").value = data.cliente.id;
-                    wrapper.querySelector("[name*='nombre_cliente']").value = data.cliente.nombre || '';
-                    wrapper.querySelector("[name*='apellido_paterno_cliente']").value = data.cliente.apellido_paterno || '';
-                    wrapper.querySelector("[name*='apellido_materno_cliente']").value = data.cliente.apellido_materno || '';
-                    wrapper.querySelector("[name*='telefono_cliente']").value = data.cliente.telefono || '';
-                    wrapper.querySelector("[name*='tipo_visita_cliente']").value = data.cliente.tipo_visita || '';
-                    ModalAlerts.show("Cliente encontrado y cargado.", { type: "success", title: "Cliente encontrado" });
-                } else {
-                    ModalAlerts.show("Cliente no encontrado. Ingresa los datos manualmente.", { type: "info", title: "No encontrado" });
-                }
-
-            } catch (error) {
-                console.error(error);
-                ModalAlerts.show("Ocurrió un error al buscar el cliente.", { type: "error", title: "Error" });
-            }
-        });
-    },
-
-    // Rellena formulario para editar reservación con datos existentes
-    async rellenarFormularioEdicion(data) {
-        document.getElementById("modalTitle").textContent = "Editar Reservación";
-        document.getElementById("saveButton").textContent = "Actualizar Reservación";
-
-        document.getElementById("reserva_id").value = data.id;
-        document.getElementById("fecha_reserva").value = data.fecha;
-        document.getElementById("fecha_reserva").setAttribute('data-original-date', data.fecha);
-        
-        window.originalHoraReserva = data.hora; // Guardar hora original
-
-        document.getElementById("duracion").value = data.duracion;
-        
-        const experienciaSelect = document.getElementById("experiencia_id");
-        const cabinaSelect = document.getElementById("cabina_id");
-        experienciaSelect.value = data.experiencia_id;
-        cabinaSelect.value = data.cabina_id;
-
-        document.getElementById("cliente_existente_id").value = data.cliente_existente_id || "";
-        document.getElementById("correo_cliente").value = data.correo_cliente || "";
-        document.getElementById("nombre_cliente").value = data.nombre_cliente || "";
-        document.getElementById("apellido_paterno_cliente").value = data.apellido_paterno_cliente || "";
-        document.getElementById("apellido_materno_cliente").value = data.apellido_materno_cliente || "";
-        document.getElementById("telefono_cliente").value = data.telefono_cliente || "";
-        document.getElementById("tipo_visita_cliente").value = data.tipo_visita_cliente || "";
-
-        const datosDiv = document.getElementById("datosCliente");
-        datosDiv.style.display = "block";
-        document.getElementById("observaciones").value = data.observaciones || "";
-
-        // Mostrar campos de fecha y hora para la edición
-        const fechaWrapper = document.getElementById("fecha-wrapper");
-        if (fechaWrapper) {
-            fechaWrapper.classList.remove("d-none");
-        }
-        const horaWrapper = document.getElementById("hora-wrapper");
-        if (horaWrapper) {
-            horaWrapper.classList.remove("d-none");
-        }
-
-        const anfitrionWrapper = document.getElementById("anfitrionWrapper");
-        const anfitrionSelect = document.getElementById("anfitrion_id_select");
-        anfitrionWrapper.style.display = "block";
-        anfitrionSelect.innerHTML = "";
-
-        data.anfitriones.forEach(anfitrion => {
-            const option = document.createElement("option");
-            option.value = anfitrion.id;
-            option.textContent = anfitrion.nombre;
-            anfitrionSelect.appendChild(option);
-        });
-
-        anfitrionSelect.value = data.anfitrion_id;
-        document.getElementById("selected_anfitrion").disabled = true;
-
-        const horaSelect = document.getElementById("hora");
-        horaSelect.innerHTML = '<option value="">Selecciona una hora</option>'; // Clear existing options
-
-        if (data.horarios_disponibles && data.horarios_disponibles.length > 0) {
-            data.horarios_disponibles.forEach(hora => {
-                const option = document.createElement('option');
-                option.value = hora;
-                option.textContent = hora;
-                horaSelect.appendChild(option);
-            });
-        }
-        horaSelect.value = data.hora;
-        // Asegurar que el select de hora esté habilitado para poder cambiarla manualmente
-        if (horaSelect) {
-            horaSelect.disabled = false;
-            horaSelect.removeAttribute('disabled');
-        }
-        
-        const modalEl = document.getElementById("reservationModal");
-        const modal = new bootstrap.Modal(modalEl, { keyboard: false });
-        
-        const addReservaBtn = document.getElementById("addReservaBtn");
-        if(addReservaBtn) {
-            addReservaBtn.classList.add("d-none");
-        }
-        
-        modal.show();
-    },
-
     // Limpia y resetea todos los campos y estados del formulario
     limpiarFormulario() {
         const form = document.getElementById("reservationForm");
@@ -540,58 +347,12 @@ export const ReservationFormHandler = {
         if (modalTitle) modalTitle.textContent = "Nueva Reservación";
     },
 
-    // Llena selects de experiencia, cabina y anfitrión para formularios dinámicos
-    populateSelects(wrapper) {
-        const experienciaSelect = wrapper.querySelector("select[name='experiencia_id']");
-        if (experienciaSelect) {
-            experienciaSelect.innerHTML = '<option disabled selected>Selecciona experiencia</option>';
-            (window.ReservasConfig?.experiencias || []).forEach(exp => {
-                const opt = document.createElement("option");
-                opt.value = exp.id;
-                opt.textContent = exp.nombre;
-                opt.setAttribute("data-duracion", exp.duracion);
-                experienciaSelect.appendChild(opt);
-            });
-
-            const duracionInput = wrapper.querySelector("input[name='duracion']");
-            if (duracionInput) {
-                experienciaSelect.addEventListener("change", () => {
-                    const duracion = experienciaSelect.options[experienciaSelect.selectedIndex]?.getAttribute("data-duracion") || 0;
-                    duracionInput.value = duracion;
-                });
-            }
-        }
-
-        const cabinaSelect = wrapper.querySelector("select[name='cabina_id']");
-        if (cabinaSelect) {
-            cabinaSelect.innerHTML = '<option disabled selected>Selecciona cabina</option>';
-            (window.ReservasConfig?.cabinas || []).forEach(cabina => {
-                const opt = document.createElement("option");
-                opt.value = cabina.id;
-                opt.textContent = cabina.nombre;
-                cabinaSelect.appendChild(opt);
-            });
-        }
-
-        const anfitrionSelect = wrapper.querySelector("select[name='anfitrion_id']");
-        if (anfitrionSelect) {
-            anfitrionSelect.innerHTML = '<option disabled selected>Selecciona anfitrión</option>';
-            (window.ReservasConfig?.anfitriones || []).forEach(a => {
-                const opt = document.createElement("option");
-                opt.value = a.id;
-                opt.textContent = a.nombre_usuario;
-                anfitrionSelect.appendChild(opt);
-            });
-            // Filtrar experiencias según el anfitrión seleccionado
-            this.filtrarExperienciasPorAnfitrion(anfitrionSelect.value, wrapper);
-        }
-    },
-
     // Configura filtrado de cabinas y anfitriones según experiencia y fecha seleccionadas
     setupFiltradoPorExperienciaYFecha() {
         const experienciaSelect = document.getElementById("experiencia_id");
         const fechaInput = document.getElementById("fecha_reserva");
         const cabinaSelect = document.getElementById("cabina_id");
+        const anfitrionSelect = document.getElementById("anfitrion_id_select");
 
         const resetSelect = (select, mensaje) => {
             if (select) {
@@ -607,79 +368,64 @@ export const ReservationFormHandler = {
 
             const experiencias = window.ReservasConfig.experiencias || [];
             const cabinas = window.ReservasConfig.cabinas || [];
+            const anfitriones = window.ReservasConfig.anfitriones || [];
             
             const experiencia = experiencias.find(e => e.id == experienciaId);
             if (!experiencia) return;
 
             const nombreRequerido = ReservationFormHandler.normalizeString(experiencia.nombre || "");
+            const dia = ReservationFormHandler.diaSemana(fecha);
 
             // Filtra cabinas compatibles
             const cabinasCompatibles = cabinas.filter(c => ReservationFormHandler.cabinaSoportaClase(c, nombreRequerido));
 
-            // Guarda la cabina seleccionada antes de limpiar
-            const cabinaSeleccionadaAnteriormente = cabinaSelect.value;
+            // Filtra anfitriones compatibles
+            const anfitrionesCompatibles = anfitriones.filter(a => {
+                const clasesRaw = (a.operativo?.clases_actividad || a.clases_actividad || []).map(c => typeof c === "string" ? c : (c?.nombre || ''));
+                const clases = clasesRaw.map(c => ReservationFormHandler.normalizeString(c));
+                const depto = ReservationFormHandler.normalizeString(a.operativo?.departamento || a.departamento || '');
+                const horarios = (window.ReservasConfig.horarios?.[a.id]?.[dia]) || [];
 
-            // Actualiza select de cabina
+                const cumpleClase = clases.includes(nombreRequerido);
+                const cumpleHorario = horarios.length > 0;
+                const cumpleDepto = depto === "spa";
+
+                return cumpleDepto && cumpleClase && cumpleHorario;
+            });
+
+            // Guarda selecciones anteriores antes de limpiar
+            const cabinaSeleccionadaAnteriormente = cabinaSelect.value;
+            const anfitrionSeleccionadoAnteriormente = anfitrionSelect ? anfitrionSelect.value : null;
+
+            // Actualiza select de cabinas
             resetSelect(cabinaSelect, "Selecciona cabina");
             let cabinaAnteriorAunCompatible = false;
-
             cabinasCompatibles.forEach(c => {
                 const option = document.createElement("option");
                 option.value = c.id;
                 option.textContent = c.nombre;
                 cabinaSelect.appendChild(option);
-                if (String(c.id) === String(cabinaSeleccionadaAnteriormente)) {
-                    cabinaAnteriorAunCompatible = true;
-                }
+                if (String(c.id) === String(cabinaSeleccionadaAnteriormente)) cabinaAnteriorAunCompatible = true;
             });
+            if (cabinaAnteriorAunCompatible) cabinaSelect.value = cabinaSeleccionadaAnteriormente;
 
-            // Si la cabina anterior sigue siendo compatible, la re-selecciona
-            if (cabinaAnteriorAunCompatible) {
-                cabinaSelect.value = cabinaSeleccionadaAnteriormente;
+            // Actualiza select de anfitriones (si existe en el formulario de edición)
+            if (anfitrionSelect) {
+                resetSelect(anfitrionSelect, "Selecciona anfitrión");
+                let anfitrionAnteriorAunCompatible = false;
+                anfitrionesCompatibles.forEach(a => {
+                    const opt = document.createElement("option");
+                    opt.value = a.id;
+                    opt.textContent = a.nombre_usuario + ' ' + (a.apellido_paterno || '');
+                    anfitrionSelect.appendChild(opt);
+                    if (String(a.id) === String(anfitrionSeleccionadoAnteriormente)) anfitrionAnteriorAunCompatible = true;
+                });
+                if (anfitrionAnteriorAunCompatible) anfitrionSelect.value = anfitrionSeleccionadoAnteriormente;
             }
         };
 
         experienciaSelect?.addEventListener("change", filtrar);
         fechaInput?.addEventListener("change", filtrar);
-    },
-
-    // Actualiza las horas disponibles según filtros y bloqueos/reservas existentes
-    async actualizarHorasDisponibles(wrapper) {
-        const experienciaId = wrapper.querySelector("[name*='experiencia_id']")?.value;
-        const fecha = wrapper.querySelector("[name*='fecha']")?.value;
-        const anfitrionId = wrapper.querySelector("[name*='anfitrion_id']")?.value;
-        const horaSelect = wrapper.querySelector("select[name*='hora']");
-
-        if (!fecha || !anfitrionId || !experienciaId) {
-            horaSelect.innerHTML = `<option value="">Selecciona hora</option>`;
-            return;
-        }
-
-        try {
-            const params = new URLSearchParams({ experience_id: experienciaId });
-            const url = `/anfitriones/${anfitrionId}/horarios/${fecha}?${params.toString()}`;
-            
-            const response = await fetch(url);
-            if (!response.ok) {
-                throw new Error('No se pudieron obtener los horarios.');
-            }
-            const horarios = await response.json();
-
-            horaSelect.innerHTML = '<option value="">Selecciona una hora</option>';
-            if (horarios && horarios.length > 0) {
-                horarios.forEach(hora => {
-                    const option = document.createElement('option');
-                    option.value = hora;
-                    option.textContent = hora;
-                    horaSelect.appendChild(option);
-                });
-            } else {
-                 horaSelect.innerHTML = '<option value="">No hay horas disponibles</option>';
-            }
-        } catch (error) {
-            console.error('Error al obtener horarios para el grupo:', error);
-            horaSelect.innerHTML = '<option value="">Error al cargar horas</option>';
-        }
     },
 
     // Filtra experiencias permitidas por anfitrión
@@ -808,17 +554,30 @@ export const ReservationFormHandler = {
             if (formFecha !== fecha) return;
 
             const formHora = isPrincipal ? wrapper.querySelector("#hora")?.value : wrapper.querySelector("[name*='hora']")?.value;
-            const formAnfitrionId = isPrincipal ? document.getElementById("selected_anfitrion")?.value : wrapper.querySelector("[name*='anfitrion_id']")?.value;
+            
+            let formAnfitrionId;
+            if (isPrincipal) {
+                // En el formulario principal, el anfitrión puede estar en dos campos diferentes
+                // dependiendo de si se está creando o editando una reserva.
+                const isEditing = !!document.getElementById("reserva_id").value;
+                formAnfitrionId = isEditing
+                    ? wrapper.querySelector("#anfitrion_id_select")?.value
+                    : document.getElementById("selected_anfitrion")?.value;
+            } else {
+                formAnfitrionId = wrapper.querySelector("[name*='anfitrion_id']")?.value;
+            }
+
             const formCabinaId = isPrincipal ? wrapper.querySelector("[name*='cabina_id']")?.value : wrapper.querySelector("[name*='cabina_id']")?.value;
             const formExperienciaId = isPrincipal ? wrapper.querySelector("[name*='experiencia_id']")?.value : wrapper.querySelector("[name*='experiencia_id']")?.value;
 
-            if (!formHora || !formExperienciaId) return;
+            if (!formHora || !formExperienciaId || !formAnfitrionId) return;
 
             const exp = experiencias.find(e => e.id == formExperienciaId);
             if (!exp) return;
 
             const duracionExp = parseInt(exp.duracion || 0);
             const inicio = this.toMinutes(formHora);
+            if (inicio === -1) return; // No procesar si la hora es inválida o no está seleccionada
 
             if (String(formAnfitrionId) === String(anfitrionId)) {
                 ocupados.anfitrion.push([inicio, inicio + duracionExp + 10]); // con descanso
@@ -833,59 +592,6 @@ export const ReservationFormHandler = {
         document.querySelectorAll('.reserva-extra').forEach(procesarWrapper);
 
         return ocupados;
-    },
-
-    // Filtra selects de cabinas y anfitriones compatibles con la experiencia y fecha
-    filtrarCabinasYAnfitriones(wrapper) {
-        const experienciaId = wrapper.querySelector("[name*='experiencia_id']")?.value;
-        const fecha = wrapper.querySelector("[name*='fecha']")?.value;
-        const selectCabina = wrapper.querySelector("select[name*='cabina_id']");
-        const selectAnfitrion = wrapper.querySelector("select[name*='anfitrion_id']");
-
-        if (!experienciaId || !fecha || !selectCabina || !selectAnfitrion) return;
-
-        const experiencia = (window.ReservasConfig.experiencias || []).find(e => e.id == experienciaId);
-        if (!experiencia) return;
-
-        const nombreRequerido = ReservationFormHandler.normalizeString(experiencia.nombre || '');
-
-        let dia = ReservationFormHandler.diaSemana(fecha);
-
-        // Filtra anfitriones con clase, departamento y horario válido
-        const anfitrionesCompatibles = (window.ReservasConfig.anfitriones || []).filter(a => {
-            const clasesRaw = (a.operativo?.clases_actividad || a.clases_actividad || []).map(c => typeof c === "string" ? c : (c?.nombre || ''));
-            const clases = clasesRaw.map(c => ReservationFormHandler.normalizeString(c));
-            const depto = ReservationFormHandler.normalizeString(a.operativo?.departamento || a.departamento || '');
-            const horarios = (window.ReservasConfig.horarios?.[a.id]?.[dia]) || [];
-
-            const cumpleClase = clases.includes(nombreRequerido);
-            const cumpleHorario = horarios.length > 0;
-            const cumpleDepto = depto === "spa";
-
-            return cumpleDepto && cumpleClase && cumpleHorario;
-        });
-
-        // Filtra cabinas compatibles con el nombre de la experiencia
-        const cabinasCompatibles = (window.ReservasConfig.cabinas || []).filter(c => ReservationFormHandler.cabinaSoportaClase(c, nombreRequerido));
-
-        // Actualiza opciones cabinas y anfitriones
-        selectCabina.innerHTML = '<option value="">Selecciona cabina</option>';
-        cabinasCompatibles.forEach(c => {
-            const opt = document.createElement("option");
-            opt.value = c.id;
-            opt.textContent = c.nombre;
-            selectCabina.appendChild(opt);
-        });
-
-        if (selectAnfitrion) {
-            selectAnfitrion.innerHTML = '<option value="">Selecciona anfitrión</option>';
-            anfitrionesCompatibles.forEach(a => {
-                const opt = document.createElement("option");
-                opt.value = a.id;
-                opt.textContent = a.nombre_usuario + ' ' + (a.apellido_paterno || '');
-                selectAnfitrion.appendChild(opt);
-            });
-        }
     },
 
     // Inicializa filtro de experiencias según selección de anfitrión (solo principal)
@@ -935,14 +641,16 @@ export const ReservationFormHandler = {
         const horaSelect = document.getElementById("hora");
         const reservaIdInput = document.getElementById("reserva_id");
         const experienciaSelect = document.getElementById("experiencia_id");
+        const cabinaSelect = document.getElementById("cabina_id");
     
         const updateHoras = async () => {
             const anfitrionId = anfitrionSelect.value;
             const fecha = fechaInput.value;
             const reservaId = reservaIdInput.value;
             const experienciaId = experienciaSelect.value;
+            const cabinaId = cabinaSelect.value;
     
-            if (anfitrionId && fecha) {
+            if (anfitrionId && fecha && experienciaId && cabinaId) {
                 try {
                     let url = `/anfitriones/${anfitrionId}/horarios/${fecha}?`;
                     const params = new URLSearchParams();
@@ -957,14 +665,47 @@ export const ReservationFormHandler = {
                     if (!response.ok) {
                         throw new Error('No se pudieron obtener los horarios.');
                     }
-                    const horarios = await response.json();
+                    const horariosDesdeBackend = await response.json();
+
+                    // Obtener los horarios ya seleccionados en los formularios de acompañantes
+                    const ocupadosFormulario = this.obtenerHorariosOcupadosDelFormulario(document.getElementById('reservationForm'), fecha, anfitrionId, cabinaId);
+
+                    const experiencia = window.ReservasConfig.experiencias.find(e => e.id == experienciaId);
+                    if (!experiencia) {
+                        horaSelect.innerHTML = '<option value="">Experiencia no válida</option>';
+                        return;
+                    }
+                    const duracion = parseInt(experiencia.duracion);
+
+                    // Filtrar los horarios del backend contra los ocupados en el formulario
+                    const horariosFiltrados = horariosDesdeBackend.filter(hora => {
+                        const slotInicio = this.toMinutes(hora);
+                        if (slotInicio === -1) return false;
+
+                        const slotFinAnfitrion = slotInicio + duracion + 10; // Descanso del anfitrión
+                        const slotFinCabina = slotInicio + duracion;      // Cabina se libera inmediato
+
+                        // Revisar conflicto con el anfitrión
+                        const conflictoAnfitrion = ocupadosFormulario.anfitrion.some(([ocupadoInicio, ocupadoFin]) => {
+                            return slotInicio < ocupadoFin && slotFinAnfitrion > ocupadoInicio;
+                        });
+                        if (conflictoAnfitrion) return false;
+
+                        // Revisar conflicto con la cabina
+                        const conflictoCabina = ocupadosFormulario.cabina.some(([ocupadoInicio, ocupadoFin]) => {
+                            return slotInicio < ocupadoFin && slotFinCabina > ocupadoInicio;
+                        });
+                        if (conflictoCabina) return false;
+
+                        return true; // Hora disponible
+                    });
     
                     const horaActual = window.originalHoraReserva;
                     let horaActualEncontrada = false;
 
                     horaSelect.innerHTML = '<option value="">Selecciona una hora</option>';
-                    if (horarios && horarios.length > 0) {
-                        horarios.forEach(hora => {
+                    if (horariosFiltrados.length > 0) {
+                        horariosFiltrados.forEach(hora => {
                             const option = document.createElement('option');
                             option.value = hora;
                             option.textContent = hora;
@@ -1008,6 +749,7 @@ export const ReservationFormHandler = {
     
         fechaInput?.addEventListener('change', updateHoras);
         anfitrionSelect?.addEventListener('change', updateHoras);
-        experienciaSelect?.addEventListener('change', updateHoras); // Also trigger on experience change
+        experienciaSelect?.addEventListener('change', updateHoras);
+        cabinaSelect?.addEventListener('change', updateHoras);
     }
 };

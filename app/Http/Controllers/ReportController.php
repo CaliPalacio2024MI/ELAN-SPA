@@ -352,26 +352,30 @@ class ReportController extends Controller
 
                 $reservas = $q->get();
 
-                $groupIds = $reservas->whereNotNull('grupo_reserva_id')->whereNull('sale')->pluck('grupo_reserva_id')->unique();
-                $groupSales = Sale::whereIn('grupo_reserva_id', $groupIds)->get()->keyBy('grupo_reserva_id');
+                $groupIds = $reservas->whereNotNull('grupo_reserva_id')->pluck('grupo_reserva_id')->unique();
+                $groupSales = Sale::whereIn('grupo_reserva_id', $groupIds)->whereNull('reservacion_id')->get()->keyBy('grupo_reserva_id');
 
                 $content .= '<th>Cliente</th><th>Teléfono</th><th>Email</th><th>Tipo Visita</th><th>Experiencia</th><th>Terapeuta</th><th>Fecha</th><th>Hora</th><th>Monto Pagado</th></tr></thead><tbody>';
 
                 foreach ($reservas as $r) {
                     $cliente = $r->cliente;
-                    $nombre = $cliente ? ($cliente->nombre . ' ' . ($cliente->apellido_paterno ?? '') . ' ' . ($cliente->apellido_materno ?? '')) : 'N/D';
+                    $nombre = $cliente ? trim($cliente->nombre . ' ' . ($cliente->apellido_paterno ?? '') . ' ' . ($cliente->apellido_materno ?? '')) : 'N/D';
                     $telefono = $cliente->telefono ?? '';
                     $email = $cliente->correo ?? '';
                     $tipoVisita = $cliente->tipo_visita ?? '';
                     $experiencia = $r->experiencia->nombre ?? '';
-                    $terapeuta = $r->anfitrion ? ($r->anfitrion->nombre_usuario . ' ' . ($r->anfitrion->apellido_paterno ?? '') . ' ' . ($r->anfitrion->apellido_materno ?? '')) : '';
+                    $terapeuta = $r->anfitrion ? trim($r->anfitrion->nombre_usuario . ' ' . ($r->anfitrion->apellido_paterno ?? '') . ' ' . ($r->anfitrion->apellido_materno ?? '')) : '';
                     $fecha = $r->fecha;
                     $hora = $r->hora;
 
-                    $sale = $r->sale ?? $groupSales->get($r->grupo_reserva_id);
+                    $sale = $r->sale;
+                    if (!$sale && $r->grupo_reserva_id) {
+                        $sale = $groupSales->get($r->grupo_reserva_id);
+                    }
+
                     $monto = 0.0;
                     if ($sale) {
-                        if ($sale->grupo_reserva_id && $r->grupoReserva && $r->grupoReserva->reservaciones->count() > 0) {
+                        if ($sale->grupo_reserva_id && !$sale->reservacion_id && $r->grupoReserva && $r->grupoReserva->reservaciones->count() > 0) {
                             $monto = floatval($sale->total) / $r->grupoReserva->reservaciones->count();
                         } else {
                             $monto = floatval($sale->total);
@@ -501,25 +505,29 @@ class ReportController extends Controller
                 $reservas = $query->get();
                 $porTerapeuta = [];
                 
-                $groupIds = $reservas->whereNotNull('grupo_reserva_id')->whereNull('sale')->pluck('grupo_reserva_id')->unique();
-                $groupSales = Sale::whereIn('grupo_reserva_id', $groupIds)->get()->keyBy('grupo_reserva_id');
+                $groupIds = $reservas->whereNotNull('grupo_reserva_id')->pluck('grupo_reserva_id')->unique();
+                $groupSales = Sale::whereIn('grupo_reserva_id', $groupIds)->whereNull('reservacion_id')->get()->keyBy('grupo_reserva_id');
                 
                 foreach ($reservas as $r) {
                     $anf = $r->anfitrion;
                     $terId = $anf ? $anf->id : 0;
-                    $terName = $anf ? ($anf->nombre_usuario . ' ' . ($anf->apellido_paterno ?? '') . ' ' . ($anf->apellido_materno ?? '')) : 'Sin terapeuta';
+                    $terName = $anf ? trim($anf->nombre_usuario . ' ' . ($anf->apellido_paterno ?? '') . ' ' . ($anf->apellido_materno ?? '')) : 'Sin terapeuta';
                 
                     $exp = $r->experiencia;
                     $expId = $exp ? $exp->id : 0;
                     $expName = $exp ? $exp->nombre : 'Sin experiencia';
-                    $sale = $r->sale ?? $groupSales->get($r->grupo_reserva_id);
+                    
+                    $sale = $r->sale;
+                    if (!$sale && $r->grupo_reserva_id) {
+                        $sale = $groupSales->get($r->grupo_reserva_id);
+                    }
                 
                     if (!$sale) {
                         continue;
                     }
 
                     $numReservationsInSale = 1;
-                    if ($sale->grupo_reserva_id && $r->grupoReserva && $r->grupoReserva->reservaciones->count() > 0) {
+                    if ($sale->grupo_reserva_id && !$sale->reservacion_id && $r->grupoReserva && $r->grupoReserva->reservaciones->count() > 0) {
                         $numReservationsInSale = $r->grupoReserva->reservaciones->count();
                     }
                 
@@ -734,16 +742,23 @@ class ReportController extends Controller
                         });
                     }
                     $reservas = $query->get();
-                    $groupIds = $reservas->whereNotNull('grupo_reserva_id')->whereNull('sale')->pluck('grupo_reserva_id')->unique();
-                    $groupSales = Sale::whereIn('grupo_reserva_id', $groupIds)->get()->keyBy('grupo_reserva_id');
+                    $groupIds = $reservas->whereNotNull('grupo_reserva_id')->pluck('grupo_reserva_id')->unique();
+                    $groupSales = Sale::whereIn('grupo_reserva_id', $groupIds)->whereNull('reservacion_id')->get()->keyBy('grupo_reserva_id');
 
                     $content .= '<th>Servicio</th><th>Cantidad</th><th>Monto</th><th>Terapeuta</th><th>Fecha</th><th>Hora</th><th>Cliente</th></tr></thead><tbody>';
                     foreach ($reservas as $r) {
-                        $sale = $r->sale ?? $groupSales->get($r->grupo_reserva_id);
+                        $sale = $r->sale;
+                        if (!$sale && $r->grupo_reserva_id) {
+                            $sale = $groupSales->get($r->grupo_reserva_id);
+                        }
+
                         $monto = 0;
                         if ($sale) {
-                            $numReservationsInSale = ($sale->grupo_reserva_id && $r->grupoReserva && $r->grupoReserva->reservaciones->count() > 0) ? $r->grupoReserva->reservaciones->count() : 1;
-                            $monto = (floatval($sale->subtotal) + floatval($sale->impuestos)) / $numReservationsInSale;
+                            if ($sale->grupo_reserva_id && !$sale->reservacion_id && $r->grupoReserva && $r->grupoReserva->reservaciones->count() > 0) {
+                                $monto = (floatval($sale->subtotal) + floatval($sale->impuestos)) / $r->grupoReserva->reservaciones->count();
+                            } else {
+                                $monto = floatval($sale->subtotal) + floatval($sale->impuestos);
+                            }
                         }
 
                         $content .= "<tr>";
@@ -758,19 +773,26 @@ class ReportController extends Controller
                     }
                 } else {
                     $reservas = $query->get();
-                    $groupIds = $reservas->whereNotNull('grupo_reserva_id')->whereNull('sale')->pluck('grupo_reserva_id')->unique();
-                    $groupSales = Sale::whereIn('grupo_reserva_id', $groupIds)->get()->keyBy('grupo_reserva_id');
+                    $groupIds = $reservas->whereNotNull('grupo_reserva_id')->pluck('grupo_reserva_id')->unique();
+                    $groupSales = Sale::whereIn('grupo_reserva_id', $groupIds)->whereNull('reservacion_id')->get()->keyBy('grupo_reserva_id');
 
                     $resumen = [];
                     foreach ($reservas as $r) {
                         $expId = $r->experiencia ? $r->experiencia->id : 0;
                         $expName = $r->experiencia ? $r->experiencia->nombre : 'Sin experiencia';
 
-                        $sale = $r->sale ?? $groupSales->get($r->grupo_reserva_id);
+                        $sale = $r->sale;
+                        if (!$sale && $r->grupo_reserva_id) {
+                            $sale = $groupSales->get($r->grupo_reserva_id);
+                        }
+
                         $monto = 0;
                         if ($sale) {
-                            $numReservationsInSale = ($sale->grupo_reserva_id && $r->grupoReserva && $r->grupoReserva->reservaciones->count() > 0) ? $r->grupoReserva->reservaciones->count() : 1;
-                            $monto = (floatval($sale->subtotal) + floatval($sale->impuestos)) / $numReservationsInSale;
+                            if ($sale->grupo_reserva_id && !$sale->reservacion_id && $r->grupoReserva && $r->grupoReserva->reservaciones->count() > 0) {
+                                $monto = (floatval($sale->subtotal) + floatval($sale->impuestos)) / $r->grupoReserva->reservaciones->count();
+                            } else {
+                                $monto = floatval($sale->subtotal) + floatval($sale->impuestos);
+                            }
                         }
 
                         if (!isset($resumen[$expId])) {

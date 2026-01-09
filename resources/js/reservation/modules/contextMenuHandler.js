@@ -1,6 +1,7 @@
 // resources/js/reservation/modules/contextMenuHandler.js
 
 import { ReservationFormHandler } from './formHandler.js';
+import { EditReservationHandler } from './editReservationHandler.js';
 import { ModalHandler } from './modalHandler.js';
 import { TableLoader } from './tableLoader.js';
 import { ModalAlerts } from '@/utils/modalAlerts.js';
@@ -146,7 +147,7 @@ export const ContextMenuHandler = {
                 if (!res.ok) throw new Error("Error al obtener reservación.");
                 return res.json();
             })
-            .then(data => ReservationFormHandler.rellenarFormularioEdicion(data))
+            .then(data => EditReservationHandler.rellenarFormularioEdicion(data))
             .catch(() => ModalAlerts.show("No se pudieron cargar los datos de la reservación.", {
                 title: "Error",
                 type: "error"

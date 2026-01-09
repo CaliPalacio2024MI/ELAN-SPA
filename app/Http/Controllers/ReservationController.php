@@ -336,6 +336,12 @@ class ReservationController extends Controller
         Log::info("Solicitud para actualizar reservación ID $id", $request->all());
 
         $reservation = Reservation::findOrFail($id);
+
+        if ($reservation->check_out) {
+            Log::warning("Intento de modificar reservación con check-out ID: $id");
+            return response()->json(['error' => 'No se puede modificar una reservación con check-out realizado.'], 422);
+        }
+
         $spaId = $reservation->spa_id;
 
         try {
@@ -499,9 +505,9 @@ class ReservationController extends Controller
             ], 422);
         }
 
-        // No se pueden mover reservaciones con check-in.
-        if ($reservation->check_in) {
-            return response()->json(['error' => 'No se puede mover una reservación con check-in realizado.'], 422);
+        // No se pueden mover reservaciones con check-out.
+        if ($reservation->check_out) {
+            return response()->json(['error' => 'No se puede mover una reservación con check-out realizado.'], 422);
         }
 
         $validator = Validator::make($request->all(), [
@@ -585,6 +591,11 @@ class ReservationController extends Controller
         if (!$reservation) {
             Log::warning("Reservación no encontrada ID: $id");
             return response()->json(['error' => 'Reservación no encontrada.'], 404);
+        }
+
+        if ($reservation->check_out) {
+            Log::warning("Intento de cancelar reservación con check-out ID: $id");
+            return response()->json(['error' => 'No se puede cancelar una reservación con check-out realizado.'], 422);
         }
 
         $spa = Spa::where('nombre', session('current_spa'))->first();

@@ -30,9 +30,14 @@ class SaleController extends Controller
         ]);
 
         if ($reservation->check_out) {
-            $sale = $reservation->grupoReserva
-                ? Sale::where('grupo_reserva_id', $reservation->grupo_reserva_id)->first()
-                : Sale::where('reservacion_id', $reservation->id)->first();
+            $sale = Sale::where('reservacion_id', $reservation->id)->first();
+
+            // Para compatibilidad con ventas de grupo antiguas que no tienen reservacion_id
+            if (!$sale && $reservation->grupoReserva) {
+                $sale = Sale::where('grupo_reserva_id', $reservation->grupo_reserva_id)
+                            ->whereNull('reservacion_id')
+                            ->first();
+            }
         }
 
         return view('reservations.sales.checkout', compact('reservation', 'sale'));
@@ -67,23 +72,21 @@ class SaleController extends Controller
 
         $request->validate($rules);
 
-        $reservation = Reservation::with('grupoReserva.sale')->findOrFail($request->reservacion_id);
+        $reservation = Reservation::findOrFail($request->reservacion_id);
 
-        if ($reservation->check_out || ($reservation->grupoReserva && $reservation->grupoReserva->sale)) {
-            return redirect()->route('reservations.index')->with('error', 'Esta reservación o su grupo ya fue cobrado.');
+        if ($reservation->check_out) {
+            return redirect()->route('reservations.index')->with('error', 'Esta reservación ya fue cobrada.');
         }
 
-        $reservaciones = $request->grupo_reserva_id
-            ? Reservation::where('grupo_reserva_id', $request->grupo_reserva_id)->where('estado', 'activa')->with('experiencia')->get()
-            : collect([Reservation::with('experiencia')->findOrFail($request->reservacion_id)]);
+        $reservaciones = collect([$reservation->load('experiencia')]);
 
         $calculatedAmounts = $this->calculateSaleAmounts($reservaciones);
 
         $sale = Sale::create([
             'spa_id' => $request->spa_id,
             'cliente_id' => $request->cliente_id,
-            'grupo_reserva_id' => $request->grupo_reserva_id,
-            'reservacion_id' => $request->grupo_reserva_id ? null : $request->reservacion_id,
+            'grupo_reserva_id' => $reservation->grupo_reserva_id,
+            'reservacion_id' => $reservation->id,
             'subtotal' => $calculatedAmounts['subtotal'],
             'impuestos' => $calculatedAmounts['impuestos'],
             'propina' => $request->propina ?? 0,
@@ -125,11 +128,7 @@ class SaleController extends Controller
         }
 
         // Marcar reservaciones del grupo como pagadas (check_out)
-        if ($request->grupo_reserva_id) {
-            Reservation::where('grupo_reserva_id', $request->grupo_reserva_id)->update(['check_out' => true]);
-        } else {
-            Reservation::where('id', $request->reservacion_id)->update(['check_out' => true]);
-        }
+        $reservation->update(['check_out' => true]);
 
         return redirect()->route('reservations.index')->with('success', 'Pago registrado correctamente.');
     }
@@ -157,10 +156,16 @@ class SaleController extends Controller
         $request->validate($rules);
 
         // Recalcular totales para garantizar la integridad de los datos, usando la misma lógica que en store()
-        $reservaciones = $sale->grupo_reserva_id
-            ? Reservation::where('grupo_reserva_id', $sale->grupo_reserva_id)->where('estado', 'activa')->with('experiencia')->get()
-            : collect([$sale->reservacion()->with('experiencia')->first()]);
-
+        if ($sale->reservacion_id) {
+            $reservaciones = collect([$sale->reservacion()->with('experiencia')->first()]);
+        } elseif ($sale->grupo_reserva_id) {
+            // Mantener lógica para ventas de grupo antiguas
+            $reservaciones = Reservation::where('grupo_reserva_id', $sale->grupo_reserva_id)
+                                        ->where('estado', 'activa')
+                                        ->with('experiencia')->get();
+        } else {
+            $reservaciones = collect([]);
+        }
         $calculatedAmounts = $this->calculateSaleAmounts($reservaciones);
 
         $sale->update([

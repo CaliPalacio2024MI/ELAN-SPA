@@ -78,10 +78,15 @@
 <div id="contextMenuReserved" class="context-menu" style="display: none; position: absolute;">
     <ul>
         @if (in_array(Auth::user()->rol, ['master', 'administrador', 'recepcionista']))
-            <li id="editarOpcion">Editar Reservación</li>
-            <li id="eliminarOpcion">Cancelar Reservación</li>
-            <li id="checkinOpcion">Check in</li>
-            <li id="checkoutOpcion">Check out</li>
+            {{-- Opciones para reservaciones SIN check-out --}}
+            <li id="editarOpcion" class="opcion-no-checkout">Editar Reservación</li>
+            <li id="eliminarOpcion" class="opcion-no-checkout">Cancelar Reservación</li>
+            
+            {{-- Opción para reservaciones SIN check-in --}}
+            <li id="checkinOpcion" class="opcion-no-checkout">Check in</li>
+
+            {{-- Opción para reservaciones CON check-in pero SIN check-out (lleva a la pantalla de pago) --}}
+            <li id="checkoutOpcion" class="opcion-no-checkout">Hacer Check-out</li>
         @endif
     </ul>
 </div>

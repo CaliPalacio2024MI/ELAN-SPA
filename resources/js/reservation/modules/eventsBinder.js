@@ -251,66 +251,46 @@ export const EventsBinder = {
 
                 event.preventDefault();
 
-    
-
-                const reservaId = celda.getAttribute("data-reserva-id");
-
-                const checkIn = celda.getAttribute("data-check-in"); // "1" o "0"
-
-                const checkOut = celda.getAttribute("data-check-out"); // "1" o "0"
-
-    
-
-                document.getElementById("editarOpcion")?.setAttribute("data-reserva-id", reservaId);
-
-                document.getElementById("eliminarOpcion")?.setAttribute("data-reserva-id", reservaId);
-
-    
-
-                const checkinOpcion = document.getElementById("checkinOpcion");
-
-                if (checkinOpcion) {
-
-                    checkinOpcion.setAttribute("data-reserva-id", reservaId);
-
-                    // Ocultar si ya se hizo check-in
-
-                    if (checkIn === '1') {
-
-                        checkinOpcion.style.display = 'none';
-
-                    }
-
-                    else {
-
-                        checkinOpcion.style.display = 'block';
-
-                    }
-
+                const checkOut = celda.getAttribute("data-check-out") === '1';
+                if (checkOut) {
+                    // Si ya tiene check-out, no se hace nada y no se muestra el menú.
+                    return;
                 }
 
+                const reservaId = celda.getAttribute("data-reserva-id");
+                const checkIn = celda.getAttribute("data-check-in") === '1';
     
-
+                // Seleccionar las opciones del menú
+                const editarOpcion = document.getElementById("editarOpcion");
+                const eliminarOpcion = document.getElementById("eliminarOpcion");
+                const checkinOpcion = document.getElementById("checkinOpcion");
                 const checkoutOpcion = document.getElementById("checkoutOpcion");
+    
+                // Asignar el ID de la reserva a todas las opciones
+                [editarOpcion, eliminarOpcion, checkinOpcion, checkoutOpcion].forEach(opcion => {
+                    if (opcion) {
+                        opcion.setAttribute("data-reserva-id", reservaId);
+                    }
+                });
+    
+                // Mostrar siempre editar y cancelar si no hay check-out
+                if (editarOpcion) editarOpcion.style.display = 'list-item';
+                if (eliminarOpcion) eliminarOpcion.style.display = 'list-item';
 
+                // Mostrar "Check in" o "Hacer Check-out" según corresponda
+                if (checkIn) {
+                    if (checkinOpcion) checkinOpcion.style.display = 'none';
+                    if (checkoutOpcion) checkoutOpcion.style.display = 'list-item';
+                } else {
+                    if (checkinOpcion) checkinOpcion.style.display = 'list-item';
+                    if (checkoutOpcion) checkoutOpcion.style.display = 'none';
+                }
+
+                // Asignar acción para el checkout
                 if (checkoutOpcion) {
-
-                    checkoutOpcion.setAttribute('data-reserva-id', reservaId);
-
-                    // Mostrar solo si se hizo check-in y no check-out
-
-                    if (checkIn === '1' && checkOut !== '1') {
-
-                        checkoutOpcion.style.display = 'block';
-
-                    }
-
-                    else {
-
-                        checkoutOpcion.style.display = 'none';
-
-                    }
-
+                    checkoutOpcion.onclick = () => {
+                        window.location.href = `/reservations/checkout/${reservaId}`;
+                    };
                 }
 
                 this.mostrarMenuContextual("contextMenuReserved", event);
