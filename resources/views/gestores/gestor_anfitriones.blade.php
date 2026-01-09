@@ -77,7 +77,7 @@
                     <th>Nombre</th>
                     <th>Apellido paterno</th>
                     <th>Rol</th>
-                    <th>Departamento</th>
+                    <th>Áreas</th>
                     <th>% Servicio</th>
                     <th>Especialidades</th>
                     <th>Accesos</th>

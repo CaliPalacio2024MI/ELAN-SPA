@@ -52,6 +52,11 @@
             <div class="filter" style="justify-content: flex-end;">
                 <button type="submit" class="btn" style="align-self: flex-start; margin: 0.25rem 0;">Filtrar</button>
             </div>
+            <div class="filter" style="justify-content: flex-end;">
+                <a href="{{ route('boutique.inventario.eliminaciones.excel', request()->query()) }}" class="btn" style="display: flex; align-items: center; text-decoration: none; align-self: flex-start; margin: 0.25rem 0;">
+                    <i class="fa-solid fa-download"></i>
+                </a>
+            </div>
             <div class="search-filter">
                 <input type="text" id="filtro-articulo" class="search-filter"
                     placeholder="Buscar por folio, número auxiliar, nombre, motivo...">
