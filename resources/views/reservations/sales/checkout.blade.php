@@ -152,6 +152,7 @@
     <input type="hidden" name="impuestos" value="{{ $iva }}" />
     <input type="hidden" name="cargo_experiencia" value="{{ $subtotal }}" />
     <input type="hidden" name="total" value="{{ $total }}" />
+    <input type="hidden" name="estado_pago" value="pagado" />
 
     <section>
         <label for="propina">Propina</label>
@@ -167,7 +168,7 @@
     <section>
         <label for="forma_pago">Forma de pago</label>
         @php $fp = old('forma_pago', $sale->forma_pago ?? '') @endphp
-        <select name="forma_pago" id="formaPagoSelect">
+        <select name="forma_pago" id="formaPagoSelect" required>
             <option value="">Seleccione</option>
             <option value="efectivo" {{ $fp == 'efectivo' ? 'selected' : '' }}>Efectivo</option>
             <option value="tarjeta_debito" {{ $fp == 'tarjeta_debito' ? 'selected' : '' }}>Tarjeta Débito</option>

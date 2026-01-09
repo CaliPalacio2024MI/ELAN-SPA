@@ -127,6 +127,8 @@ class SaleController extends Controller
         // Marcar reservaciones del grupo como pagadas (check_out)
         if ($request->grupo_reserva_id) {
             Reservation::where('grupo_reserva_id', $request->grupo_reserva_id)->update(['check_out' => true]);
+        } else {
+            Reservation::where('id', $request->reservacion_id)->update(['check_out' => true]);
         }
 
         return redirect()->route('reservations.index')->with('success', 'Pago registrado correctamente.');
