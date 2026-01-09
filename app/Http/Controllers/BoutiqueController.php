@@ -733,6 +733,106 @@ class BoutiqueController extends Controller
         return view('boutique.historial_eliminaciones', compact('eliminaciones', 'fechaInicio', 'fechaFin'));
     }
 
+    public function exportarEliminacionesExcel(Request $request)
+    {
+        /* ----- Se obtiene el hotel (SPA) ----- */
+        $hotelName = session('current_spa');
+        $hotel = DB::table('spas')
+            ->where('nombre', 'LIKE', '%' . ucfirst(strtolower($hotelName)) . '%')
+            ->first();
+
+        if (!$hotel) {
+            throw new Exception("Hay un problema con la ubicación del hotel, por favor contacte a soporte técnico.");
+        }
+
+        $hotelId = $hotel->id;
+        /* ------------------------------------- */
+
+        // Obtener fechas del request o establecer el último mes por defecto
+        $fechaInicio = $request->input('fecha_inicio');
+        $fechaFin = $request->input('fecha_fin');
+
+        if (!$fechaInicio || !$fechaFin) {
+            $fechaFin = Carbon::now()->format('Y-m-d');
+            $fechaInicio = Carbon::now()->subMonth()->format('Y-m-d');
+        }
+
+        $eliminaciones = DB::table('boutique_compras_eliminadas as e')
+            ->join('boutique_compras as c', 'e.fk_id_compra', '=', 'c.id')
+            ->join('boutique_articulos as a', function ($join) use ($hotelId) {
+                $join->on('c.fk_id_articulo', '=', 'a.id')
+                    ->where('a.fk_id_hotel', '=', $hotelId); // Aplicar filtro del hotel aquí
+            })
+            ->join('boutique_articulos_familias as f', 'a.fk_id_familia', '=', 'f.id')
+            ->whereBetween(DB::raw('DATE(e.created_at)'), [$fechaInicio, $fechaFin])
+            ->select([
+                'c.id',
+                'c.tipo_compra',
+                'c.folio_orden_compra',
+                'c.folio_factura',
+                DB::raw('DATE(c.created_at) as fecha_compra'),
+                DB::raw('DATE(e.created_at) as fecha_eliminacion'),
+                'a.numero_auxiliar',
+                'a.nombre_articulo',
+                'f.nombre as familia_nombre',
+                'c.cantidad_recibida',
+                'e.cantidad_eliminada',
+                'c.costo_proveedor_unidad',
+                'c.fecha_caducidad',
+                'e.motivo',
+                'e.usuario_elimino'
+            ])
+            ->orderBy('e.created_at', 'desc')
+            ->get();
+
+        // Nombre del archivo
+        $csvFileName = 'eliminaciones_' . date('Y-m-d_H-i') . '.csv';
+
+        $headers = [
+            "Content-type" => "text/csv",
+            "Content-Disposition" => "attachment; filename=$csvFileName",
+            "Pragma" => "no-cache",
+            "Cache-Control" => "must-revalidate, post-check=0, pre-check=0",
+            "Expires" => "0"
+        ];
+
+        $columns = [
+            'ID', 'Usuario', 'Tipo', 'Folio Orden', 'Folio Factura', 'Fecha Compra', 
+            'Fecha Eliminación', 'No. Auxiliar', 'Nombre', 'Familia', 
+            'Cant. Recibida', 'Cant. Eliminada', 'Precio Prov.', 'Caducidad', 'Motivo'
+        ];
+
+        $callback = function() use ($eliminaciones, $columns) {
+            $file = fopen('php://output', 'w');
+            // Agregar BOM para que Excel reconozca caracteres especiales (tildes, ñ)
+            fputs($file, "\xEF\xBB\xBF"); 
+            fputcsv($file, $columns);
+
+            foreach ($eliminaciones as $row) {
+                fputcsv($file, [
+                    $row->id,
+                    $row->usuario_elimino,
+                    ucfirst($row->tipo_compra),
+                    $row->folio_orden_compra,
+                    $row->folio_factura,
+                    \Carbon\Carbon::parse($row->fecha_compra)->format('d/m/Y'),
+                    \Carbon\Carbon::parse($row->fecha_eliminacion)->format('d/m/Y'),
+                    str_pad($row->numero_auxiliar, 10, '0', STR_PAD_LEFT), // Formato con ceros a la izquierda
+                    $row->nombre_articulo,
+                    $row->familia_nombre,
+                    $row->cantidad_recibida,
+                    $row->cantidad_eliminada,
+                    '$' . number_format($row->costo_proveedor_unidad, 2),
+                    $row->fecha_caducidad ? \Carbon\Carbon::parse($row->fecha_caducidad)->format('d/m/Y') : '-',
+                    $row->motivo
+                ]);
+            }
+            fclose($file);
+        };
+
+        return response()->stream($callback, 200, $headers);
+    }
+
     public function gestionar_familias()
     {
         /* ----- Se obtiene el hotel (SPA) ----- */

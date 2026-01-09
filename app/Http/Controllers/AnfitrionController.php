@@ -47,13 +47,28 @@ class AnfitrionController extends Controller
                     ->orWhere('nombre_usuario', 'like', "%{$search}%")
                     ->orWhere('apellido_paterno', 'like', "%{$search}%")
                     ->orWhere('apellido_materno', 'like', "%{$search}%")
-                    ->orWhere('rol', 'like', "%{$search}%");
+                    ->orWhere('rol', 'like', "%{$search}%")
+                    ->orWhere('porcentaje_servicio', 'like', "%{$search}%");
+
+                // Búsqueda por estado (Activo/Inactivo)
+                if (stripos('Activo', $search) !== false) {
+                    $q->orWhere('activo', 1);
+                }
+                if (stripos('Inactivo', $search) !== false) {
+                    $q->orWhere('activo', 0);
+                }
 
                 // Campos dentro de la relación operativo (departamento, clases_actividad JSON)
                 $q->orWhereHas('operativo', function ($oq) use ($search) {
                     $oq->where('departamento', 'like', "%{$search}%")
                        ->orWhere('clases_actividad', 'like', "%{$search}%");
                 });
+
+                // Búsqueda en accesos (nombres de Spas)
+                $spaIds = Spa::where('nombre', 'like', "%{$search}%")->pluck('id');
+                foreach ($spaIds as $id) {
+                    $q->orWhereJsonContains('accesos', $id);
+                }
             });
         }
 
