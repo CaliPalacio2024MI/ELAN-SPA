@@ -68,8 +68,6 @@
             <table class="table" id="tabla-eliminaciones">
                 <thead>
                     <tr>
-                        <th>Id</th>
-                        <th>Usuario</th>
                         <th>Tipo</th>
                         <th>Folio Orden</th>
                         <th>Folio Factura</th>
@@ -99,8 +97,6 @@
 
                         @foreach ($eliminacionesDelFolio as $eliminacion)
                             <tr class="fila-articulo {{ $claseColor }}">
-                                <td>{{ $eliminacion->id }}</td>
-                                <td>{{ $eliminacion->usuario_elimino ?? '-' }}</td>
                                 <td>{{ ucfirst($eliminacion->tipo_compra) }}</td>
                                 <td>{{ $eliminacion->folio_orden_compra ?? '-' }}</td>
                                 <td>{{ $eliminacion->folio_factura }}</td>
@@ -128,7 +124,7 @@
                         @endforeach
                     @empty
                         <tr class="fila-articulo">
-                            <td colspan="15" style="text-align: center">Sin compras eliminadas registradas</td>
+                            <td colspan="13" style="text-align: center">Sin compras eliminadas registradas</td>
                         </tr>
                     @endforelse
                 </tbody>

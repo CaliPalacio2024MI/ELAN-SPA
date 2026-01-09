@@ -266,7 +266,6 @@
                     <table class="table" id="tabla-compras">
                         <thead>
                             <tr>
-                                <th>Id</th>
                                 <th>No. Auxiliar</th>
                                 <th>Nombre</th>
                                 <th>Cantidad</th>
@@ -277,7 +276,6 @@
                         <tbody>
                             @foreach ($compras as $compra)
                                 <tr class="fila-articulo">
-                                    <td>{{ $compra->compra_id }}</td>
                                     <td>{{ str_pad($compra->numero_auxiliar, 10, '0', STR_PAD_LEFT) }}</td>
                                     <td>{{ $compra->nombre_articulo }}</td>
                                     <td>{{ $compra->cantidad_actual }}</td>
@@ -759,10 +757,10 @@
 
             compraSeleccionada = {
                 id: compraId,
-                numero_auxiliar: celdas[1].textContent,
-                nombre_articulo: celdas[2].textContent,
-                cantidad_actual: celdas[3].textContent,
-                fecha_caducidad: celdas[4].textContent !== '-' ? celdas[4].textContent : ''
+                numero_auxiliar: celdas[0].textContent,
+                nombre_articulo: celdas[1].textContent,
+                cantidad_actual: celdas[2].textContent,
+                fecha_caducidad: celdas[3].textContent !== '-' ? celdas[3].textContent : ''
             };
 
             // Llenar el modal con los datos actuales
