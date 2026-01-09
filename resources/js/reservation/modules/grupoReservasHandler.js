@@ -14,7 +14,8 @@ function populateSelects(wrapper) {
         (window.ReservasConfig?.experiencias || []).forEach(exp => {
             const opt = document.createElement("option");
             opt.value = exp.id;
-            opt.textContent = exp.nombre;
+            // Usar el texto con información adicional si está disponible.
+            opt.textContent = exp.nombre_con_info || exp.nombre;
             opt.setAttribute("data-duracion", exp.duracion);
             experienciaSelect.appendChild(opt);
         });

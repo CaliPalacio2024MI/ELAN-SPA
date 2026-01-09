@@ -2,6 +2,37 @@
 
 import { ModalHandler } from './modalHandler.js';
 
+/**
+ * Actualiza el texto de las opciones de un <select> de experiencias
+ * para mostrar la duración y el precio, usando la información global.
+ * @param {HTMLSelectElement} selectElement El elemento select a actualizar.
+ */
+function actualizarTextoOpcionesExperiencia(selectElement) {
+    // Asegurarse de que el select y la configuración global de experiencias existan.
+    if (!selectElement || !window.ReservasConfig?.experiencias) {
+        console.warn('No se pudo actualizar el texto de las experiencias: faltan datos.');
+        return;
+    }
+
+    // Crear un mapa para buscar eficientemente la información de la experiencia por su ID.
+    // La propiedad `nombre_con_info` fue añadida desde el controlador.
+    const experiencesMap = new Map(
+        window.ReservasConfig.experiencias.map(e => [String(e.id), e.nombre_con_info])
+    );
+
+    // Iterar sobre cada <option> del select.
+    for (const option of selectElement.options) {
+        // Si la opción tiene un valor (no es el placeholder) y existe en nuestro mapa...
+        if (option.value && experiencesMap.has(option.value)) {
+            const textoConInfo = experiencesMap.get(option.value);
+            // Actualizar el texto del option para que sea más descriptivo.
+            if (option.textContent !== textoConInfo) {
+                option.textContent = textoConInfo;
+            }
+        }
+    }
+}
+
 export const EditReservationHandler = {
     /**
      * Rellena el formulario de reservación con los datos de una reservación existente para su edición.
@@ -21,6 +52,13 @@ export const EditReservationHandler = {
         document.getElementById("duracion").value = data.duracion;
         
         const experienciaSelect = document.getElementById("experiencia_id");
+
+        // --- INICIO DEL CAMBIO ---
+        // Se llama a la nueva función para actualizar el texto de las opciones del select
+        // de experiencias, mostrando ahora la duración y el precio.
+        actualizarTextoOpcionesExperiencia(experienciaSelect);
+        // --- FIN DEL CAMBIO ---
+
         experienciaSelect.value = data.experiencia_id;
 
         document.getElementById("cliente_existente_id").value = data.cliente_existente_id || "";

@@ -39,7 +39,10 @@ class ReservationController extends Controller
 
         $anfitriones = $this->getAnfitrionesActivos($spa->id);
         $clients = Client::all();
-        $experiences = Experience::where('spa_id', $spa->id)->where('activo', true)->get();
+        $experiences = Experience::where('spa_id', $spa->id)->where('activo', true)->get()->map(function ($experience) {
+            $experience->nombre_con_info = "{$experience->nombre} ({$experience->duracion} min - $" . number_format($experience->precio, 2) . ")";
+            return $experience;
+        });
         $cabinas = Cabina::where('spa_id', $spa->id)->where('activo', true)->get();
 
         // Normalizar horarios de anfitriones para el día solicitado
@@ -320,7 +323,8 @@ class ReservationController extends Controller
                     'nombre' => $anfitrion->nombre_usuario
                 ];
             })->values(),
-            'horarios_disponibles' => $horariosDisponibles
+            'horarios_disponibles' => $horariosDisponibles,
+            'grupo' => [], // Forzar reseteo de UI en frontend
         ]);
     }
 
@@ -389,7 +393,7 @@ class ReservationController extends Controller
         
         $newAnfitrion = Anfitrion::with('operativo')->find($validated['anfitrion_id']);
         $breakTime = 0;
-        if ($newAnfitrion && $newAnfitrion->operativo && $newAnfitrion->operativo->departamento === 'spa') {
+        if ($newAnfitrion && $newAnfitrion->operativo && strtolower($newAnfitrion->operativo->departamento) === 'spa') {
             $breakTime = config('finance.reservations.therapist_break_time', 10);
         }
 
@@ -534,7 +538,11 @@ class ReservationController extends Controller
 
         // Calcular horas para validaciones
         $duracionMin = $reservation->experiencia->duracion;
-        $breakTime = config('finance.reservations.therapist_break_time', 10);
+        $breakTime = 0;
+        if ($newAnfitrion && $newAnfitrion->operativo && strtolower($newAnfitrion->operativo->departamento) === 'spa') {
+            $breakTime = config('finance.reservations.therapist_break_time', 10);
+        }
+
         $horaInicio = $validated['hora'];
         $horaFin = date('H:i', strtotime("$horaInicio +{$duracionMin} minutes"));
         $horaFinDescanso = date('H:i', strtotime("$horaFin +{$breakTime} minutes"));
@@ -920,7 +928,7 @@ class ReservationController extends Controller
             if (empty($res->hora) || !$res->experiencia) continue;
 
             $breakTime = 0;
-            if ($res->anfitrion && $res->anfitrion->operativo && $res->anfitrion->operativo->departamento === 'spa') {
+            if ($res->anfitrion && $res->anfitrion->operativo && strtolower($res->anfitrion->operativo->departamento) === 'spa') {
                 $breakTime = $defaultBreakTime;
             }
 
@@ -1148,10 +1156,16 @@ class ReservationController extends Controller
 
         $experiences = Experience::where('spa_id', $spa->id)
             ->where('activo', true)
-            ->whereIn('clase', $clases)
-            ->get();
+            ->where(function ($query) use ($clases) {
+                $query->whereIn('clase', $clases)
+                      ->orWhereIn('nombre', $clases);
+            })
+            ->get()
+            ->map(function ($experience) {
+                $experience->nombre_con_info = "{$experience->nombre} ({$experience->duracion} min - $" . number_format($experience->precio, 2) . ")";
+                return $experience;
+            });
 
         return response()->json($experiences);
     }
-    
 }

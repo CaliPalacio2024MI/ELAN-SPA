@@ -451,7 +451,8 @@ export const ReservationFormHandler = {
             if (clasesAnfitrion.includes(nombreNorm)) {
                 const option = document.createElement('option');
                 option.value = exp.id;
-                option.textContent = exp.nombre;
+                // Usar el texto con información adicional si está disponible.
+                option.textContent = exp.nombre_con_info || exp.nombre;
                 option.setAttribute('data-duracion', exp.duracion);
                 selectExperiencia.appendChild(option);
             }
