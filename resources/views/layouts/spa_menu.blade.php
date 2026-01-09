@@ -27,7 +27,9 @@
     <link href="https://fonts.googleapis.com/css2?family=Kumbh+Sans:wght@300;400;600;700&display=swap" rel="stylesheet">
 
     {{-- 2. Estilos base de la aplicación cargados con Vite --}}
-    @vite(['resources/css/menus/menu_base_styles.css', 'resources/css/sabana_reservaciones/reservaciones_styles.css', 'resources/css/ModalAviso/modal_aviso_individual.css'])
+    @vite([
+        'resources/css/menus/menu_base_styles.css'
+    ])
 
     {{-- 3. Inclusión del tema dinámico (desde la BD) o estático (desde archivo) --}}
     @include('layouts.dynamic-styles')

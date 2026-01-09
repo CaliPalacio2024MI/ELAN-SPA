@@ -12,7 +12,7 @@
         $spaCss = session('current_spa') ?? strtolower(optional(Auth::user()->spa)->nombre);
     @endphp
     @if (file_exists(public_path('build/manifest.json')) || file_exists(public_path('hot')))
-        @vite('resources/css/menus/' . $spaCss . '/menu_styles.css')
+        @vite('resources/css/menus/themes/' . $spaCss . '.css')
         @vite('resources/css/general_styles.css')
         @vite('resources/css/boutique/boutique_reporteo_styles.css')
         @vite('resources/css/componentes/autoComplete.css')

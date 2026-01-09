@@ -17,33 +17,8 @@
             @include('layouts.navigation')
 
             @isset($header)
-                @php
-                    $headerBgStyle = '';
-                    $headerTextStyle = '';
-                    $headerClass = 'bg-white'; // Clase de fondo por defecto
-
-                    if ($color = session('current_unidad_color')) {
-                        $headerBgStyle = 'background-color: ' . e($color) . ' !important;';
-                        $headerClass = ''; // Quitamos el fondo blanco si hay color personalizado
-
-                        // Lógica para determinar si el color de fondo es oscuro
-                        $hex = ltrim($color, '#');
-                        if (strlen($hex) == 3) {
-                            $hex = $hex[0] . $hex[0] . $hex[1] . $hex[1] . $hex[2] . $hex[2];
-                        }
-                        $r = hexdec(substr($hex, 0, 2));
-                        $g = hexdec(substr($hex, 2, 2));
-                        $b = hexdec(substr($hex, 4, 2));
-                        $luminance = (0.299 * $r + 0.587 * $g + 0.114 * $b);
-
-                        // Si la luminancia es baja, el color es oscuro, por lo que el texto debe ser blanco.
-                        if ($luminance < 140) {
-                            $headerTextStyle = 'color: white !important;';
-                        }
-                    }
-                @endphp
-                <header class="{{ $headerClass }} shadow" style="{{ $headerBgStyle }}">
-                    <div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8" style="{{ $headerTextStyle }}">
+                <header class="bg-white shadow">
+                    <div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
                         {{ $header }}
                     </div>
                 </header>

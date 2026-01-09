@@ -78,8 +78,9 @@ class ReportController extends Controller
             'reservaciones_canceladas' => (clone $queryReservations)->where('estado', 'cancelada')->count(),
             'check_in' => (clone $queryReservations)->where('check_in', true)->count(),
             'check_out' => (clone $queryReservations)->where('check_out', true)->count(),
-            'clientes_atendidos' => Client::whereHas('reservaciones', fn($q) => $q->whereIn('id', (clone $queryReservations)->pluck('id')))->distinct()->count('clients.id'),
-            'grupos' => GrupoReserva::whereHas('reservaciones', fn($q) => $q->whereIn('id', (clone $queryReservations)->pluck('id')))->count(),
+            'clientes_atendidos' => Client::whereHas('reservaciones', fn ($q) => $q->whereIn('id', (clone $queryReservations)->pluck('id')))->distinct()->count('clients.id'),
+            'grupos' => GrupoReserva::whereHas('reservaciones', fn ($q) => $q->whereIn('id', (clone $queryReservations)->pluck('id')))
+                                     ->has('reservaciones', '>', 1)->count(),
             'bloqueos' => BlockedSlot::where('spa_id', $spaId)->whereBetween('fecha', [$fechaInicio, $fechaFin])->count(),
             'ventas_total' => (clone $querySales)->sum('total'),
             'ventas_propina' => (clone $querySales)->sum('propina'),
@@ -184,8 +185,8 @@ class ReportController extends Controller
 
     public function exportTipo(Request $request, $tipo)
     {
-        $fechaInicio = $request->input('desde') ?? now()->startOfMonth()->toDateString();
-        $fechaFin = $request->input('hasta') ?? now()->endOfMonth()->toDateString();
+        $fechaInicio = $request->input('desde') ?? now()->toDateString();
+        $fechaFin = $request->input('hasta') ?? now()->toDateString();
         $search = $request->input('search') ?? $request->input('busqueda');
         $servicio = $request->input('servicio');
 
@@ -329,11 +330,12 @@ class ReportController extends Controller
                               ->orWhere(function ($saleQuery) use ($searchTerm) {
                                   // Búsqueda para ventas individuales (monto total)
                                   $saleQuery->whereHas('sale', function ($sq) use ($searchTerm) {
-                                      $sq->where(DB::raw("CAST(total AS CHAR)"), 'like', "%{$searchTerm}%");
+                                      $sq->whereNull('grupo_reserva_id') // Asegurar que es una venta individual
+                                         ->where(DB::raw("CAST(total AS CHAR)"), 'like', "%{$searchTerm}%");
                                   })
                                   // Búsqueda para ventas de grupo (monto proporcional)
                                   ->orWhereHas('grupoReserva.sale', function ($gsq) use ($searchTerm) {
-                                      $gsq->where(DB::raw("CAST(total / GREATEST((SELECT COUNT(*) FROM reservations r_inner WHERE r_inner.grupo_reserva_id = sales.grupo_reserva_id), 1) AS CHAR)"), 'like', "%{$searchTerm}%");
+                                      $gsq->where(DB::raw("CAST(ROUND(total / GREATEST((SELECT COUNT(*) FROM reservations r_inner WHERE r_inner.grupo_reserva_id = sales.grupo_reserva_id), 1), 2) AS CHAR)"), 'like', "%{$searchTerm}%");
                                   });
                               });
                     });
@@ -425,13 +427,25 @@ class ReportController extends Controller
                     })
                     ->orderBy('created_at', 'desc');
 
+                $datos = $query->get();
+
                 if ($searchTerm) {
-                    $query->where(function($q) use ($searchTerm) {
-                        $q->where('id', 'like', "%{$searchTerm}%")
-                          ->orWhere('created_at', 'like', "%{$searchTerm}%");
+                    $searchTermLower = mb_strtolower($searchTerm, 'UTF-8');
+                    $datos = $datos->filter(function ($g) use ($searchTermLower) {
+                        $reservaPrincipal = $g->reservaciones->firstWhere('es_principal', true)
+                            ?? $g->reservaciones->sortBy('fecha')->sortBy('hora')->first();
+                        
+                        $fechaReserva = $reservaPrincipal ? Carbon::parse($reservaPrincipal->fecha)->format('d/m/Y') : '';
+                        $fechaCreacion = $g->created_at->format('d/m/Y H:i');
+                        $reservacionesCount = (string)$g->reservaciones_count;
+
+                        // Buscar en todos los campos visibles
+                        return str_contains(mb_strtolower($fechaCreacion, 'UTF-8'), $searchTermLower) ||
+                               str_contains(mb_strtolower($fechaReserva, 'UTF-8'), $searchTermLower) ||
+                               str_contains($reservacionesCount, $searchTermLower);
                     });
                 }
-                $datos = $query->get();
+
                 $content .= '<th>Fecha de creación</th><th>Fecha de Reserva</th><th>Reservaciones</th></tr></thead><tbody>';
                 foreach ($datos as $g) {
                     $reservaPrincipal = $g->reservaciones->firstWhere('es_principal', true)
@@ -456,12 +470,17 @@ class ReportController extends Controller
                     ->groupBy('experiencia_id')
                     ->with('experiencia');
 
+                $datos = $query->orderByDesc('total')->get();
+
                 if ($searchTerm) {
-                    $query->whereHas('experiencia', function ($eq) use ($searchTerm) {
-                        $eq->where(DB::raw('LOWER(nombre)'), 'like', "%{$searchTerm}%");
+                    $searchTermLower = mb_strtolower($searchTerm, 'UTF-8');
+                    $datos = $datos->filter(function ($item) use ($searchTermLower) {
+                        $nombre = $item->experiencia ? mb_strtolower($item->experiencia->nombre, 'UTF-8') : '';
+                        $total = (string)$item->total;
+
+                        return str_contains($nombre, $searchTermLower) || str_contains($total, $searchTermLower);
                     });
                 }
-                $datos = $query->orderByDesc('total')->get();
 
                 $content .= '<th>Experiencia</th><th>Total</th></tr></thead><tbody>';
                 foreach ($datos as $e) {
@@ -646,7 +665,7 @@ class ReportController extends Controller
                                 ->orWhere('fecha', 'like', "%{$searchTerm}%");
                             })
                             ->orWhere(DB::raw("CAST(propina AS CHAR)"), 'like', "%{$searchTerm}%")
-                            ->orWhere(DB::raw("CAST(propina * {$tasaIvaPropina} AS CHAR)"), 'like', "%{$searchTerm}%");
+                            ->orWhere(DB::raw("CAST(ROUND(propina * {$tasaIvaPropina}, 2) AS CHAR)"), 'like', "%{$searchTerm}%");
                         });
                     }
 
@@ -701,11 +720,16 @@ class ReportController extends Controller
                               ->orWhereHas('cliente', fn($cq) => $cq->where(DB::raw("LOWER(CONCAT_WS(' ', nombre, apellido_paterno, apellido_materno))"), 'like', "%{$searchTerm}%"))
                               ->orWhere('fecha', 'like', "%{$searchTerm}%")
                               ->orWhere('hora', 'like', "%{$searchTerm}%")
-                              ->orWhereHas('sale', function ($sq) use ($searchTerm) {
-                                  $sq->where(DB::raw("(subtotal + impuestos)"), 'like', "%{$searchTerm}%");
-                              })
-                              ->orWhereHas('grupoReserva.sale', function ($gsq) use ($searchTerm) {
-                                  $gsq->where(DB::raw("(subtotal + impuestos)"), 'like', "%{$searchTerm}%");
+                              ->orWhere(function ($montoQuery) use ($searchTerm) {
+                                  // Búsqueda para ventas individuales (monto)
+                                  $montoQuery->whereHas('sale', function ($sq) use ($searchTerm) {
+                                      $sq->whereNull('grupo_reserva_id')
+                                         ->where(DB::raw("CAST(subtotal + impuestos AS CHAR)"), 'like', "%{$searchTerm}%");
+                                  })
+                                  // Búsqueda para ventas de grupo (monto proporcional)
+                                  ->orWhereHas('grupoReserva.sale', function ($gsq) use ($searchTerm) {
+                                      $gsq->where(DB::raw("CAST(ROUND((subtotal + impuestos) / GREATEST((SELECT COUNT(*) FROM reservations r_inner WHERE r_inner.grupo_reserva_id = sales.grupo_reserva_id), 1), 2) AS CHAR)"), 'like', "%{$searchTerm}%");
+                                  });
                               });
                         });
                     }

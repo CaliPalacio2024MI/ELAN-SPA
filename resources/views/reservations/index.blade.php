@@ -16,7 +16,7 @@
     @if (file_exists(public_path('build/manifest.json')) || file_exists(public_path('hot')))
         {{-- Vite carga estilos CSS específicos para el spa --}}
         @vite([
-            'resources/css/menus/' . $spaCss . '/menu_styles.css',
+            'resources/css/menus/themes/' . $spaCss . '.css',
             'resources/css/sabana_reservaciones/reservaciones_styles.css',
             'resources/css/ModalAviso/modal_aviso_individual.css'
         ])

@@ -762,22 +762,29 @@ class ReservationController extends Controller
             ], 422);
         }
 
-        // Crear grupo y reservas
-        // --- Calcular o crear el primer cliente del grupo ---
-        $primerClienteId = $reservasValidas[0]['cliente_existente_id'] ?? Client::create([
-          'nombre' => $reservasValidas[0]['nombre_cliente'],
-          'apellido_paterno' => $reservasValidas[0]['apellido_paterno_cliente'],
-          'apellido_materno' => $reservasValidas[0]['apellido_materno_cliente'] ?? null,
-          'correo' => $reservasValidas[0]['correo_cliente'],
-          'telefono' => $reservasValidas[0]['telefono_cliente'],
-          'tipo_visita' => $reservasValidas[0]['tipo_visita_cliente'],
-        ])->id;
+        // --- Crear grupo y reservas ---
+        $isGroup = count($reservasValidas) > 1;
+        $grupoId = null;
 
-        $grupo = GrupoReserva::create([
-            'cliente_id' => $primerClienteId,
-        ]);
+        if ($isGroup) {
+            // Para un grupo, el cliente principal es el de la primera reserva.
+            $primerClienteId = $reservasValidas[0]['cliente_existente_id'] ?? Client::create([
+                'nombre' => $reservasValidas[0]['nombre_cliente'],
+                'apellido_paterno' => $reservasValidas[0]['apellido_paterno_cliente'],
+                'apellido_materno' => $reservasValidas[0]['apellido_materno_cliente'] ?? null,
+                'correo' => $reservasValidas[0]['correo_cliente'],
+                'telefono' => $reservasValidas[0]['telefono_cliente'],
+                'tipo_visita' => $reservasValidas[0]['tipo_visita_cliente'],
+            ])->id;
+
+            $grupo = GrupoReserva::create([
+                'cliente_id' => $primerClienteId,
+            ]);
+            $grupoId = $grupo->id;
+        }
 
         foreach ($reservasValidas as $i => $data) {
+            // Crear o encontrar el cliente para esta reserva específica.
             $clienteId = $data['cliente_existente_id'] ?? Client::create([
                 'nombre' => $data['nombre_cliente'],
                 'apellido_paterno' => $data['apellido_paterno_cliente'],
@@ -796,8 +803,8 @@ class ReservationController extends Controller
                 'fecha' => $data['fecha'],
                 'hora' => $data['hora'],
                 'observaciones' => $data['observaciones'] ?? null,
-                'grupo_reserva_id' => $grupo->id,
-                'es_principal' => $i === 0
+                'grupo_reserva_id' => $grupoId, // Será null si no es un grupo
+                'es_principal' => $isGroup && $i === 0,
             ]);
         }
 

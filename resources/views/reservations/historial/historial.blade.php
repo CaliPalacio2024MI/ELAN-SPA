@@ -13,7 +13,7 @@
     @endphp
     @if (file_exists(public_path('build/manifest.json')) || file_exists(public_path('hot')))
         @vite([
-            'resources/css/menus/' . $spaCss . '/menu_styles.css',
+            'resources/css/menus/themes/' . $spaCss . '.css',
             'resources/css/ModalAviso/modal_aviso.css',
             'resources/css/sabana_reservaciones/historial.css'
         ])
