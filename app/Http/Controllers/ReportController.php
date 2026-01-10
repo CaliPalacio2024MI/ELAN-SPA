@@ -269,20 +269,26 @@ class ReportController extends Controller
 
                 if ($searchTerm) {
                     $query->where(function($q) use ($searchTerm) {
-                        $q->whereHas('cliente', function ($cq) use ($searchTerm) {
-                            $cq->where(DB::raw("LOWER(CONCAT_WS(' ', nombre, apellido_paterno, apellido_materno))"), 'like', "%{$searchTerm}%");
+                        $q->where('fecha', 'like', "%{$searchTerm}%")
+                          ->orWhere('hora', 'like', "%{$searchTerm}%")
+                          ->orWhere('estado', 'like', "%{$searchTerm}%")
+                          ->orWhereHas('cliente', function ($q2) use ($searchTerm) {
+                            $q2->where(DB::raw('LOWER(nombre)'), 'like', "%{$searchTerm}%")
+                              ->orWhere(DB::raw('LOWER(apellido_paterno)'), 'like', "%{$searchTerm}%")
+                              ->orWhere(DB::raw('LOWER(apellido_materno)'), 'like', "%{$searchTerm}%")
+                              ->orWhere(DB::raw('LOWER(correo)'), 'like', "%{$searchTerm}%")
+                              ->orWhere('telefono', 'like', "%{$searchTerm}%");
                         })
                         ->orWhereHas('experiencia', function ($eq) use ($searchTerm) {
                             $eq->where(DB::raw('LOWER(nombre)'), 'like', "%{$searchTerm}%");
                         })
-                        ->orWhere('fecha', 'like', "%{$searchTerm}%")
-                        ->orWhere('hora', 'like', "%{$searchTerm}%")
-                        ->orWhere('estado', 'like', "%{$searchTerm}%")
                         ->orWhereHas('cabina', function ($cbq) use ($searchTerm) {
                             $cbq->where(DB::raw('LOWER(nombre)'), 'like', "%{$searchTerm}%");
                         })
                         ->orWhereHas('anfitrion', function ($aq) use ($searchTerm) {
-                            $aq->where(DB::raw('LOWER(nombre_usuario)'), 'like', "%{$searchTerm}%");
+                            $aq->where(DB::raw('LOWER(nombre_usuario)'), 'like', "%{$searchTerm}%")
+                              ->orWhere(DB::raw('LOWER(apellido_paterno)'), 'like', "%{$searchTerm}%")
+                              ->orWhere(DB::raw('LOWER(apellido_materno)'), 'like', "%{$searchTerm}%");
                         });
                     });
                 }
@@ -330,8 +336,8 @@ class ReportController extends Controller
                               ->orWhere(function ($saleQuery) use ($searchTerm) {
                                   // Búsqueda para ventas individuales (monto total)
                                   $saleQuery->whereHas('sale', function ($sq) use ($searchTerm) {
-                                      $sq->whereNull('grupo_reserva_id') // Asegurar que es una venta individual
-                                         ->where(DB::raw("CAST(total AS CHAR)"), 'like', "%{$searchTerm}%");
+                                      // Al usar whereHas('sale'), ya se filtran ventas por reservación (individuales).
+                                      $sq->where(DB::raw("CAST(total AS CHAR)"), 'like', "%{$searchTerm}%");
                                   })
                                   // Búsqueda para ventas de grupo (monto proporcional)
                                   ->orWhereHas('grupoReserva.sale', function ($gsq) use ($searchTerm) {
@@ -649,14 +655,25 @@ class ReportController extends Controller
                     ->where('propina', '>', 0);
 
                     if ($searchTerm) {
-                        $tasaIvaPropina = config('finance.tax_rates.tip_iva', 0.16);
-                        $salesQuery->where(function ($query) use ($searchTerm, $tasaIvaPropina) {
+                        $tasaIva = config('finance.tax_rates.iva', 0.16);
+
+                        // Subconsulta para obtener el porcentaje de comisión del anfitrión correcto,
+                        // manejando tanto ventas individuales como de grupo (estilo antiguo).
+                        $commissionPercentageSubquery = "
+                            COALESCE(
+                                (SELECT a.porcentaje_servicio FROM anfitriones a JOIN reservations r ON a.id = r.anfitrion_id WHERE r.id = sales.reservacion_id),
+                                (SELECT a.porcentaje_servicio FROM anfitriones a JOIN reservations r ON a.id = r.anfitrion_id WHERE r.grupo_reserva_id = sales.grupo_reserva_id ORDER BY r.fecha ASC, r.hora ASC LIMIT 1)
+                            )
+                        ";
+
+                        $salesQuery->where(function ($query) use ($searchTerm, $tasaIva, $commissionPercentageSubquery) {
                             $query->whereHas('cliente', function ($cq) use ($searchTerm) {
                                 $cq->where(DB::raw("LOWER(CONCAT_WS(' ', nombre, apellido_paterno, apellido_materno))"), 'like', "%{$searchTerm}%");
                             })
                             ->orWhereHas('reservacion', function ($subQuery) use ($searchTerm) {
                                 $subQuery->whereHas('anfitrion', function ($aq) use ($searchTerm) {
-                                    $aq->where(DB::raw("LOWER(CONCAT_WS(' ', nombre_usuario, apellido_paterno, apellido_materno))"), "like", "%{$searchTerm}%");
+                                    $aq->where(DB::raw("LOWER(CONCAT_WS(' ', nombre_usuario, apellido_paterno, apellido_materno))"), "like", "%{$searchTerm}%")
+                                       ->orWhere('porcentaje_servicio', 'like', "%{$searchTerm}%");
                                 })
                                 ->orWhereHas('experiencia', function ($eq) use ($searchTerm) {
                                     $eq->where(DB::raw("LOWER(nombre)"), 'like', "%{$searchTerm}%");
@@ -665,7 +682,8 @@ class ReportController extends Controller
                             })
                             ->orWhereHas('grupoReserva.reservaciones', function ($groupQuery) use ($searchTerm) {
                                 $groupQuery->whereHas('anfitrion', function ($aq) use ($searchTerm) {
-                                    $aq->where(DB::raw("LOWER(CONCAT_WS(' ', nombre_usuario, apellido_paterno, apellido_materno))"), 'like', "%{$searchTerm}%");
+                                    $aq->where(DB::raw("LOWER(CONCAT_WS(' ', nombre_usuario, apellido_paterno, apellido_materno))"), 'like', "%{$searchTerm}%")
+                                       ->orWhere('porcentaje_servicio', 'like', "%{$searchTerm}%");
                                 })
                                 ->orWhereHas('experiencia', function ($eq) use ($searchTerm) {
                                     $eq->where(DB::raw("LOWER(nombre)"), 'like', "%{$searchTerm}%");
@@ -673,7 +691,11 @@ class ReportController extends Controller
                                 ->orWhere('fecha', 'like', "%{$searchTerm}%");
                             })
                             ->orWhere(DB::raw("CAST(propina AS CHAR)"), 'like', "%{$searchTerm}%")
-                            ->orWhere(DB::raw("CAST(ROUND(propina * {$tasaIvaPropina}, 2) AS CHAR)"), 'like', "%{$searchTerm}%");
+                            ->orWhere(DB::raw("CAST(ROUND(subtotal * {$tasaIva}, 2) AS CHAR)"), 'like', "%{$searchTerm}%")
+                            ->orWhereRaw(
+                                "CAST(ROUND((sales.subtotal * ({$commissionPercentageSubquery})) / 100, 2) AS CHAR) LIKE ?",
+                                ["%{$searchTerm}%"]
+                            );
                         });
                     }
 
@@ -736,8 +758,8 @@ class ReportController extends Controller
                               ->orWhere(function ($montoQuery) use ($searchTerm) {
                                   // Búsqueda para ventas individuales (monto)
                                   $montoQuery->whereHas('sale', function ($sq) use ($searchTerm) {
-                                      $sq->whereNull('grupo_reserva_id')
-                                         ->where(DB::raw("CAST(subtotal + impuestos AS CHAR)"), 'like', "%{$searchTerm}%");
+                                      // Se corrige la consulta para incluir todas las ventas individuales.
+                                      $sq->where(DB::raw("CAST(subtotal + impuestos AS CHAR)"), 'like', "%{$searchTerm}%");
                                   })
                                   // Búsqueda para ventas de grupo (monto proporcional)
                                   ->orWhereHas('grupoReserva.sale', function ($gsq) use ($searchTerm) {

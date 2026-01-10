@@ -1151,10 +1151,15 @@ class ReservationController extends Controller
         if ($request->filled('busqueda')) {
             $search = trim($request->input('busqueda'));
             $query->where(function($q) use ($search) {
-                $q->whereHas('cliente', function ($q2) use ($search) {
+                $q->where('fecha', 'like', "%{$search}%")
+                  ->orWhere('hora', 'like', "%{$search}%")
+                  ->orWhere('estado', 'like', "%{$search}%")
+                  ->orWhereHas('cliente', function ($q2) use ($search) {
                     $q2->where('nombre', 'like', "%{$search}%")
                       ->orWhere('apellido_paterno', 'like', "%{$search}%")
-                      ->orWhere('apellido_materno', 'like', "%{$search}%");
+                      ->orWhere('apellido_materno', 'like', "%{$search}%")
+                      ->orWhere('correo', 'like', "%{$search}%")
+                      ->orWhere('telefono', 'like', "%{$search}%");
                 })
                 ->orWhereHas('experiencia', function ($q2) use ($search) {
                     $q2->where('nombre', 'like', "%{$search}%");
@@ -1163,7 +1168,9 @@ class ReservationController extends Controller
                     $q2->where('nombre', 'like', "%{$search}%");
                 })
                 ->orWhereHas('anfitrion', function ($q2) use ($search) {
-                    $q2->where('nombre_usuario', 'like', "%{$search}%");
+                    $q2->where('nombre_usuario', 'like', "%{$search}%")
+                      ->orWhere('apellido_paterno', 'like', "%{$search}%")
+                      ->orWhere('apellido_materno', 'like', "%{$search}%");
                 });
             });
         }
