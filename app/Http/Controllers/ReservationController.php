@@ -135,7 +135,37 @@ class ReservationController extends Controller
                         }
                     }
                 ],
-                'nombre_cliente' => 'required_without:cliente_existente_id|string|max:255',
+                'nombre_cliente' => [
+                    'required_without:cliente_existente_id',
+                    'string',
+                    'max:255',
+                    function ($attribute, $value, $fail) use ($request) {
+                        if (!$request->input('cliente_existente_id')) {
+                            $nombre = $request->input('nombre_cliente');
+                            $paterno = $request->input('apellido_paterno_cliente');
+                            $materno = $request->input('apellido_materno_cliente');
+                            $telefono = $request->input('telefono_cliente');
+
+                            if ($nombre && $paterno && $telefono) {
+                                $query = Client::where('nombre', $nombre)
+                                    ->where('apellido_paterno', $paterno)
+                                    ->where('telefono', $telefono);
+
+                                if ($materno) {
+                                    $query->where('apellido_materno', $materno);
+                                } else {
+                                    $query->where(function ($q) {
+                                        $q->whereNull('apellido_materno')->orWhere('apellido_materno', '');
+                                    });
+                                }
+
+                                if ($query->exists()) {
+                                    $fail('Ya existe un cliente registrado con el mismo nombre, apellidos y teléfono. Por favor, busque y seleccione el cliente existente.');
+                                }
+                            }
+                        }
+                    }
+                ],
                 'apellido_paterno_cliente' => 'required_without:cliente_existente_id|string|max:255',
                 'apellido_materno_cliente' => 'nullable|string|max:255',
                 'telefono_cliente' => 'required_without:cliente_existente_id|string|max:20',
@@ -709,7 +739,37 @@ class ReservationController extends Controller
                         }
                     }
                 ],
-                'nombre_cliente' => 'required_without:cliente_existente_id|string|max:255',
+                'nombre_cliente' => [
+                    'required_without:cliente_existente_id',
+                    'string',
+                    'max:255',
+                    function ($attribute, $value, $fail) use ($r) {
+                        if (empty($r['cliente_existente_id'])) {
+                            $nombre = $r['nombre_cliente'] ?? null;
+                            $paterno = $r['apellido_paterno_cliente'] ?? null;
+                            $materno = $r['apellido_materno_cliente'] ?? null;
+                            $telefono = $r['telefono_cliente'] ?? null;
+
+                            if ($nombre && $paterno && $telefono) {
+                                $query = Client::where('nombre', $nombre)
+                                    ->where('apellido_paterno', $paterno)
+                                    ->where('telefono', $telefono);
+
+                                if ($materno) {
+                                    $query->where('apellido_materno', $materno);
+                                } else {
+                                    $query->where(function ($q) {
+                                        $q->whereNull('apellido_materno')->orWhere('apellido_materno', '');
+                                    });
+                                }
+
+                                if ($query->exists()) {
+                                    $fail('Ya existe un cliente registrado con el mismo nombre, apellidos y teléfono en el grupo.');
+                                }
+                            }
+                        }
+                    }
+                ],
                 'apellido_paterno_cliente' => 'required_without:cliente_existente_id|string|max:255',
                 'apellido_materno_cliente' => 'nullable|string|max:255',
                 'telefono_cliente' => 'required_without:cliente_existente_id|string|max:20',
