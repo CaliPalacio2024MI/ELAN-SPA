@@ -161,7 +161,10 @@ class ReservationController extends Controller
             'tipo_visita' => $validated['tipo_visita_cliente'],
         ])->id;
 
-        $experiencia = Experience::where('id', $validated['experiencia_id'])->where('activo', true)->firstOrFail();
+        $experiencia = Experience::where('id', $validated['experiencia_id'])
+            ->where('spa_id', $spa->id)
+            ->where('activo', true)
+            ->firstOrFail();
 
         $horaInicio = $validated['hora'];
         $duracionMin = $experiencia->duracion;
@@ -400,10 +403,22 @@ class ReservationController extends Controller
         $validated['cliente_id'] = $cliente->id;
 
         // Calcular horas para validaciones
-        $experiencia = Experience::find($validated['experiencia_id']);
+        $experiencia = Experience::where('id', $validated['experiencia_id'])->where('spa_id', $spaId)->first();
+        if (!$experiencia) {
+            return response()->json(['error' => 'La experiencia seleccionada no pertenece a este spa.'], 422);
+        }
         $duracionMin = $experiencia->duracion ?? 0;
         
-        $newAnfitrion = Anfitrion::with('operativo')->find($validated['anfitrion_id']);
+        $newAnfitrion = Anfitrion::with('operativo')
+            ->where('id', $validated['anfitrion_id'])
+            ->where('spa_id', $spaId)
+            ->whereHas('operativo', function ($q) {
+                $q->whereIn('departamento', ['spa', 'salon de belleza']);
+            })
+            ->first();
+        if (!$newAnfitrion) {
+            return response()->json(['error' => 'El anfitrión no es válido o no pertenece a los departamentos de SPA o Salón de Belleza.'], 422);
+        }
         $breakTime = 0;
         if ($newAnfitrion && $newAnfitrion->operativo && strtolower($newAnfitrion->operativo->departamento) === 'spa') {
             $breakTime = config('finance.reservations.therapist_break_time', 10);
@@ -481,7 +496,17 @@ class ReservationController extends Controller
         $reservation = Reservation::findOrFail($id);
 
         // VALIDACIÓN: El anfitrión debe tener la especialidad (clase) requerida por la experiencia.
-        $newAnfitrion = Anfitrion::with('operativo')->find($request->input('anfitrion_id'));
+        $newAnfitrion = Anfitrion::with('operativo')
+            ->where('id', $request->input('anfitrion_id'))
+            ->where('spa_id', $reservation->spa_id)
+            ->whereHas('operativo', function ($q) {
+                $q->whereIn('departamento', ['spa', 'salon de belleza']);
+            })
+            ->first();
+
+        if (!$newAnfitrion) {
+            return response()->json(['error' => 'El anfitrión no es válido o no pertenece a los departamentos de SPA o Salón de Belleza.'], 422);
+        }
         $experience = $reservation->experiencia;
         
         // Función para normalizar strings (minúsculas, sin tildes, sin espacios extra)
@@ -706,7 +731,7 @@ class ReservationController extends Controller
             $data['index'] = $index;
 
             // Verificar experiencia y calcular horarios
-            $exp = Experience::find($data['experiencia_id']);
+            $exp = Experience::where('id', $data['experiencia_id'])->where('spa_id', $spa->id)->first();
             if (!$exp) {
                 $errores["Reserva #$index"][] = 'La experiencia no existe.';
                 continue;
@@ -719,7 +744,17 @@ class ReservationController extends Controller
             $data['spa_id'] = $spa->id;
 
             // Obtener y normalizar horario del anfitrión
-            $anfitrion = Anfitrion::with('horario')->find($data['anfitrion_id']);
+            $anfitrion = Anfitrion::with('horario')
+                ->where('id', $data['anfitrion_id'])
+                ->where('spa_id', $spa->id)
+                ->whereHas('operativo', function ($q) {
+                    $q->whereIn('departamento', ['spa', 'salon de belleza']);
+                })
+                ->first();
+            if (!$anfitrion) {
+                $errores["Reserva #$index"][] = 'El anfitrión no es válido o no pertenece a los departamentos de SPA o Salón de Belleza.';
+                continue;
+            }
             $horario = $anfitrion?->horario?->horarios ?? [];
             $horarioNormalizado = [];
             foreach ($horario as $diaClave => $horas) {
@@ -1118,8 +1153,13 @@ class ReservationController extends Controller
         // 3. Filtrar horarios
         $experienceDuration = 0;
         if ($request->has('experience_id')) {
-            $experience = Experience::find($request->input('experience_id'));
-            if ($experience) $experienceDuration = $experience->duracion;
+            $spa = Spa::where('nombre', session('current_spa'))->first();
+            if ($spa) {
+                $experience = Experience::where('id', $request->input('experience_id'))
+                    ->where('spa_id', $spa->id)
+                    ->first();
+                if ($experience) $experienceDuration = $experience->duracion;
+            }
         }
 
         $availableSlots = [];

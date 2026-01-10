@@ -7,6 +7,7 @@ use App\Models\Spa;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\DB;
 use App\Models\Anfitrion;
 use App\Models\AnfitrionOperativo;
 use App\Models\HorarioAnfitrion;
