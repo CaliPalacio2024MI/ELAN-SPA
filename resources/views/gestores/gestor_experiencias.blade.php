@@ -158,6 +158,7 @@
 
                         <div id="clase-input-container" class="d-none">
                             <input type="text" class="form-control mt-2" id="clase_input" name="clase" placeholder="Nueva clase">
+                            <button type="button" class="btn btn-sm btn-outline-secondary mt-2" id="toggleClaseSelect">Usar existente</button>
                         </div>
                     </div>
                                      
@@ -257,5 +258,61 @@
     @vite(['resources/js/gestores/experiencias.js'])
     @include('components.session-alert')
 @endif
-@endsection
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // --- MODAL CREAR ---
+    const toggleClaseInputBtn = document.getElementById('toggleClaseInput');
+    const toggleClaseSelectBtn = document.getElementById('toggleClaseSelect');
+    const claseSelectContainer = document.getElementById('clase-select-container');
+    const claseInputContainer = document.getElementById('clase-input-container');
+    const claseSelect = document.getElementById('clase_select');
+    const claseInput = document.getElementById('clase_input');
 
+    if (toggleClaseInputBtn) {
+        toggleClaseInputBtn.addEventListener('click', function () {
+            claseSelectContainer.classList.add('d-none');
+            claseInputContainer.classList.remove('d-none');
+            claseSelect.name = ''; // Desactivar el select
+            claseInput.name = 'clase'; // Activar el input
+            claseInput.focus();
+        });
+    }
+
+    if (toggleClaseSelectBtn) {
+        toggleClaseSelectBtn.addEventListener('click', function () {
+            claseSelectContainer.classList.remove('d-none');
+            claseInputContainer.classList.add('d-none');
+            claseSelect.name = 'clase'; // Activar el select
+            claseInput.name = ''; // Desactivar el input
+        });
+    }
+
+    // --- MODAL EDITAR ---
+    const editToggleClaseInputBtn = document.getElementById('edit_toggleClaseInput');
+    const editToggleClaseSelectBtn = document.getElementById('edit_toggleClaseSelect');
+    const editClaseSelectContainer = document.getElementById('edit-clase-select-container');
+    const editClaseInputContainer = document.getElementById('edit-clase-input-container');
+    const editClaseSelect = document.getElementById('edit_clase_select');
+    const editClaseInput = document.getElementById('edit_clase_input');
+
+    if (editToggleClaseInputBtn) {
+        editToggleClaseInputBtn.addEventListener('click', function () {
+            editClaseSelectContainer.classList.add('d-none');
+            editClaseInputContainer.classList.remove('d-none');
+            editClaseSelect.name = '';
+            editClaseInput.name = 'clase';
+            editClaseInput.focus();
+        });
+    }
+
+    if (editToggleClaseSelectBtn) {
+        editToggleClaseSelectBtn.addEventListener('click', function () {
+            editClaseSelectContainer.classList.remove('d-none');
+            editClaseInputContainer.classList.add('d-none');
+            editClaseSelect.name = 'clase';
+            editClaseInput.name = '';
+        });
+    }
+});
+</script>
+@endsection
