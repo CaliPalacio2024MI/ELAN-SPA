@@ -286,13 +286,6 @@ export const EventsBinder = {
                     if (checkoutOpcion) checkoutOpcion.style.display = 'none';
                 }
 
-                // Asignar acción para el checkout
-                if (checkoutOpcion) {
-                    checkoutOpcion.onclick = () => {
-                        window.location.href = `/reservations/checkout/${reservaId}`;
-                    };
-                }
-
                 this.mostrarMenuContextual("contextMenuReserved", event);
 
             });

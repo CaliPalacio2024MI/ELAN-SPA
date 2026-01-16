@@ -388,7 +388,7 @@ export const ReservationFormHandler = {
 
                 const cumpleClase = clases.includes(nombreRequerido);
                 const cumpleHorario = horarios.length > 0;
-                const cumpleDepto = depto === "spa";
+                const cumpleDepto = ["spa", "salon de belleza"].includes(depto);
 
                 return cumpleDepto && cumpleClase && cumpleHorario;
             });

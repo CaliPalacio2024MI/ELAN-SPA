@@ -86,7 +86,7 @@
             <li id="checkinOpcion" class="opcion-no-checkout">Check in</li>
 
             {{-- Opción para reservaciones CON check-in pero SIN check-out (lleva a la pantalla de pago) --}}
-            <li id="checkoutOpcion" class="opcion-no-checkout">Hacer Check-out</li>
+            <li id="checkoutOpcion" class="opcion-no-checkout">Check-out</li>
         @endif
     </ul>
 </div>

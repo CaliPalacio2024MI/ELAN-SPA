@@ -122,8 +122,50 @@ class ReservationController extends Controller
         try {
             $validated = $request->validate([
                 'cliente_existente_id' => 'nullable|exists:clients,id',
-                'correo_cliente' => 'required|email',
-                'nombre_cliente' => 'required_without:cliente_existente_id|string|max:255',
+                'correo_cliente' => [
+                    'required',
+                    'email',
+                    function ($attribute, $value, $fail) use ($request) {
+                        // Si no se está usando un cliente existente (se va a crear uno nuevo),
+                        // verificar que el correo no esté ya en uso por otro cliente.
+                        if (!$request->input('cliente_existente_id')) {
+                            if (Client::where('correo', $value)->exists()) {
+                                $fail('Ya existe un cliente con este correo electrónico. Por favor, busque y seleccione el cliente existente.');
+                            }
+                        }
+                    }
+                ],
+                'nombre_cliente' => [
+                    'required_without:cliente_existente_id',
+                    'string',
+                    'max:255',
+                    function ($attribute, $value, $fail) use ($request) {
+                        if (!$request->input('cliente_existente_id')) {
+                            $nombre = $request->input('nombre_cliente');
+                            $paterno = $request->input('apellido_paterno_cliente');
+                            $materno = $request->input('apellido_materno_cliente');
+                            $telefono = $request->input('telefono_cliente');
+
+                            if ($nombre && $paterno && $telefono) {
+                                $query = Client::where('nombre', $nombre)
+                                    ->where('apellido_paterno', $paterno)
+                                    ->where('telefono', $telefono);
+
+                                if ($materno) {
+                                    $query->where('apellido_materno', $materno);
+                                } else {
+                                    $query->where(function ($q) {
+                                        $q->whereNull('apellido_materno')->orWhere('apellido_materno', '');
+                                    });
+                                }
+
+                                if ($query->exists()) {
+                                    $fail('Ya existe un cliente registrado con el mismo nombre, apellidos y teléfono. Por favor, busque y seleccione el cliente existente.');
+                                }
+                            }
+                        }
+                    }
+                ],
                 'apellido_paterno_cliente' => 'required_without:cliente_existente_id|string|max:255',
                 'apellido_materno_cliente' => 'nullable|string|max:255',
                 'telefono_cliente' => 'required_without:cliente_existente_id|string|max:20',
@@ -149,7 +191,10 @@ class ReservationController extends Controller
             'tipo_visita' => $validated['tipo_visita_cliente'],
         ])->id;
 
-        $experiencia = Experience::where('id', $validated['experiencia_id'])->where('activo', true)->firstOrFail();
+        $experiencia = Experience::where('id', $validated['experiencia_id'])
+            ->where('spa_id', $spa->id)
+            ->where('activo', true)
+            ->firstOrFail();
 
         $horaInicio = $validated['hora'];
         $duracionMin = $experiencia->duracion;
@@ -388,10 +433,22 @@ class ReservationController extends Controller
         $validated['cliente_id'] = $cliente->id;
 
         // Calcular horas para validaciones
-        $experiencia = Experience::find($validated['experiencia_id']);
+        $experiencia = Experience::where('id', $validated['experiencia_id'])->where('spa_id', $spaId)->first();
+        if (!$experiencia) {
+            return response()->json(['error' => 'La experiencia seleccionada no pertenece a este spa.'], 422);
+        }
         $duracionMin = $experiencia->duracion ?? 0;
         
-        $newAnfitrion = Anfitrion::with('operativo')->find($validated['anfitrion_id']);
+        $newAnfitrion = Anfitrion::with('operativo')
+            ->where('id', $validated['anfitrion_id'])
+            ->where('spa_id', $spaId)
+            ->whereHas('operativo', function ($q) {
+                $q->whereIn('departamento', ['spa', 'salon de belleza']);
+            })
+            ->first();
+        if (!$newAnfitrion) {
+            return response()->json(['error' => 'El anfitrión no es válido o no pertenece a los departamentos de SPA o Salón de Belleza.'], 422);
+        }
         $breakTime = 0;
         if ($newAnfitrion && $newAnfitrion->operativo && strtolower($newAnfitrion->operativo->departamento) === 'spa') {
             $breakTime = config('finance.reservations.therapist_break_time', 10);
@@ -469,7 +526,17 @@ class ReservationController extends Controller
         $reservation = Reservation::findOrFail($id);
 
         // VALIDACIÓN: El anfitrión debe tener la especialidad (clase) requerida por la experiencia.
-        $newAnfitrion = Anfitrion::with('operativo')->find($request->input('anfitrion_id'));
+        $newAnfitrion = Anfitrion::with('operativo')
+            ->where('id', $request->input('anfitrion_id'))
+            ->where('spa_id', $reservation->spa_id)
+            ->whereHas('operativo', function ($q) {
+                $q->whereIn('departamento', ['spa', 'salon de belleza']);
+            })
+            ->first();
+
+        if (!$newAnfitrion) {
+            return response()->json(['error' => 'El anfitrión no es válido o no pertenece a los departamentos de SPA o Salón de Belleza.'], 422);
+        }
         $experience = $reservation->experiencia;
         
         // Función para normalizar strings (minúsculas, sin tildes, sin espacios extra)
@@ -485,27 +552,25 @@ class ReservationController extends Controller
         };
 
         $requiredName = $normalize($experience->nombre);
-        $requiredClass = $normalize($experience->clase);
         
         $anfitrionClasses = $newAnfitrion->operativo->clases_actividad ?? [];
         $normalizedAnfitrionClasses = array_map($normalize, $anfitrionClasses);
 
-        $isQualified = in_array($requiredClass, $normalizedAnfitrionClasses) || in_array($requiredName, $normalizedAnfitrionClasses);
+        $isQualified = in_array($requiredName, $normalizedAnfitrionClasses);
 
         // --- DEBUGGING ---
         Log::debug('--- Calificación de Anfitrión D&D (Lógica flexible) ---');
         Log::debug("Reservación ID: {$id}");
         Log::debug("Anfitrión a verificar ID: {$newAnfitrion->id}");
-        Log::debug("Clase requerida (normalizada): '{$requiredClass}'");
         Log::debug("Nombre requerido (normalizado): '{$requiredName}'");
         Log::debug("Clases del anfitrión (normalizadas): " . implode(', ', $normalizedAnfitrionClasses));
         Log::debug("Resultado de calificación: " . ($isQualified ? 'CALIFICADO' : 'NO CALIFICADO'));
         // --- FIN DEBUGGING ---
 
         if (!$isQualified) {
-            Log::warning("VALIDACIÓN FALLIDA: Anfitrión no posee la clase '{$requiredClass}' ni el nombre '{$requiredName}'.");
+            Log::warning("VALIDACIÓN FALLIDA: Anfitrión no posee la especialidad '{$requiredName}'.");
             return response()->json([
-                'error' => 'El anfitrión no está calificado para realizar esta experiencia.'
+                'error' => "El anfitrión no está calificado para realizar la experiencia '{$experience->nombre}'."
             ], 422);
         }
 
@@ -661,8 +726,50 @@ class ReservationController extends Controller
 
             $validador = Validator::make($r, [
                 'cliente_existente_id' => 'nullable|exists:clients,id',
-                'correo_cliente' => 'required|email',
-                'nombre_cliente' => 'required_without:cliente_existente_id|string|max:255',
+                'correo_cliente' => [
+                    'required',
+                    'email',
+                    function ($attribute, $value, $fail) use ($r) {
+                        // Si no se está usando un cliente existente (se va a crear uno nuevo),
+                        // verificar que el correo no esté ya en uso por otro cliente.
+                        if (empty($r['cliente_existente_id'])) {
+                            if (Client::where('correo', $value)->exists()) {
+                                $fail('Ya existe un cliente con este correo electrónico. Por favor, busque y seleccione el cliente existente.');
+                            }
+                        }
+                    }
+                ],
+                'nombre_cliente' => [
+                    'required_without:cliente_existente_id',
+                    'string',
+                    'max:255',
+                    function ($attribute, $value, $fail) use ($r) {
+                        if (empty($r['cliente_existente_id'])) {
+                            $nombre = $r['nombre_cliente'] ?? null;
+                            $paterno = $r['apellido_paterno_cliente'] ?? null;
+                            $materno = $r['apellido_materno_cliente'] ?? null;
+                            $telefono = $r['telefono_cliente'] ?? null;
+
+                            if ($nombre && $paterno && $telefono) {
+                                $query = Client::where('nombre', $nombre)
+                                    ->where('apellido_paterno', $paterno)
+                                    ->where('telefono', $telefono);
+
+                                if ($materno) {
+                                    $query->where('apellido_materno', $materno);
+                                } else {
+                                    $query->where(function ($q) {
+                                        $q->whereNull('apellido_materno')->orWhere('apellido_materno', '');
+                                    });
+                                }
+
+                                if ($query->exists()) {
+                                    $fail('Ya existe un cliente registrado con el mismo nombre, apellidos y teléfono en el grupo.');
+                                }
+                            }
+                        }
+                    }
+                ],
                 'apellido_paterno_cliente' => 'required_without:cliente_existente_id|string|max:255',
                 'apellido_materno_cliente' => 'nullable|string|max:255',
                 'telefono_cliente' => 'required_without:cliente_existente_id|string|max:20',
@@ -684,7 +791,7 @@ class ReservationController extends Controller
             $data['index'] = $index;
 
             // Verificar experiencia y calcular horarios
-            $exp = Experience::find($data['experiencia_id']);
+            $exp = Experience::where('id', $data['experiencia_id'])->where('spa_id', $spa->id)->first();
             if (!$exp) {
                 $errores["Reserva #$index"][] = 'La experiencia no existe.';
                 continue;
@@ -697,7 +804,17 @@ class ReservationController extends Controller
             $data['spa_id'] = $spa->id;
 
             // Obtener y normalizar horario del anfitrión
-            $anfitrion = Anfitrion::with('horario')->find($data['anfitrion_id']);
+            $anfitrion = Anfitrion::with('horario')
+                ->where('id', $data['anfitrion_id'])
+                ->where('spa_id', $spa->id)
+                ->whereHas('operativo', function ($q) {
+                    $q->whereIn('departamento', ['spa', 'salon de belleza']);
+                })
+                ->first();
+            if (!$anfitrion) {
+                $errores["Reserva #$index"][] = 'El anfitrión no es válido o no pertenece a los departamentos de SPA o Salón de Belleza.';
+                continue;
+            }
             $horario = $anfitrion?->horario?->horarios ?? [];
             $horarioNormalizado = [];
             foreach ($horario as $diaClave => $horas) {
@@ -1034,10 +1151,15 @@ class ReservationController extends Controller
         if ($request->filled('busqueda')) {
             $search = trim($request->input('busqueda'));
             $query->where(function($q) use ($search) {
-                $q->whereHas('cliente', function ($q2) use ($search) {
+                $q->where('fecha', 'like', "%{$search}%")
+                  ->orWhere('hora', 'like', "%{$search}%")
+                  ->orWhere('estado', 'like', "%{$search}%")
+                  ->orWhereHas('cliente', function ($q2) use ($search) {
                     $q2->where('nombre', 'like', "%{$search}%")
                       ->orWhere('apellido_paterno', 'like', "%{$search}%")
-                      ->orWhere('apellido_materno', 'like', "%{$search}%");
+                      ->orWhere('apellido_materno', 'like', "%{$search}%")
+                      ->orWhere('correo', 'like', "%{$search}%")
+                      ->orWhere('telefono', 'like', "%{$search}%");
                 })
                 ->orWhereHas('experiencia', function ($q2) use ($search) {
                     $q2->where('nombre', 'like', "%{$search}%");
@@ -1046,7 +1168,9 @@ class ReservationController extends Controller
                     $q2->where('nombre', 'like', "%{$search}%");
                 })
                 ->orWhereHas('anfitrion', function ($q2) use ($search) {
-                    $q2->where('nombre_usuario', 'like', "%{$search}%");
+                    $q2->where('nombre_usuario', 'like', "%{$search}%")
+                      ->orWhere('apellido_paterno', 'like', "%{$search}%")
+                      ->orWhere('apellido_materno', 'like', "%{$search}%");
                 });
             });
         }
@@ -1096,8 +1220,13 @@ class ReservationController extends Controller
         // 3. Filtrar horarios
         $experienceDuration = 0;
         if ($request->has('experience_id')) {
-            $experience = Experience::find($request->input('experience_id'));
-            if ($experience) $experienceDuration = $experience->duracion;
+            $spa = Spa::where('nombre', session('current_spa'))->first();
+            if ($spa) {
+                $experience = Experience::where('id', $request->input('experience_id'))
+                    ->where('spa_id', $spa->id)
+                    ->first();
+                if ($experience) $experienceDuration = $experience->duracion;
+            }
         }
 
         $availableSlots = [];
@@ -1157,8 +1286,7 @@ class ReservationController extends Controller
         $experiences = Experience::where('spa_id', $spa->id)
             ->where('activo', true)
             ->where(function ($query) use ($clases) {
-                $query->whereIn('clase', $clases)
-                      ->orWhereIn('nombre', $clases);
+                $query->whereIn('nombre', $clases);
             })
             ->get()
             ->map(function ($experience) {

@@ -7,6 +7,7 @@ use App\Models\Spa;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\DB;
 use App\Models\Anfitrion;
 use App\Models\AnfitrionOperativo;
 use App\Models\HorarioAnfitrion;
@@ -175,6 +176,7 @@ class AnfitrionController extends Controller
             'password.regex' => 'La contraseña debe tener al menos 8 caracteres, una mayúscula, una minúscula, un número y un carácter especial.',
         ]);
 
+        // Si la validación falla, Laravel redirigirá automáticamente.
         if ($validator->fails()) {
             return redirect()->route('anfitriones.index')
                 ->withErrors($validator, 'create')
@@ -182,6 +184,7 @@ class AnfitrionController extends Controller
         }
 
         $clases = array_values(array_filter($request->input('clases_actividad', [])));
+        // Obtener el spa_id de la sesión de forma segura.
         $spa = Spa::where('nombre', session('current_spa'))->first();
         $spa_id = $spa?->id;
 
@@ -192,27 +195,38 @@ class AnfitrionController extends Controller
                 ->withInput();
         }
 
-        $anfitrion = Anfitrion::create([
-            'RFC' => $request->RFC,
-            'apellido_paterno' => $request->apellido_paterno,
-            'apellido_materno' => $request->apellido_materno,
-            'nombre_usuario' => $request->nombre_usuario,
-            'password' => bcrypt($request->password),
-            'spa_id' => $spa_id,
-            'rol' => $request->rol,
-            'departamento' => $request->departamento,
-            'accesos' => $request->filled('accesos') ? array_values(array_map('intval', $request->accesos)) : [],
-            'activo' => $request->activo ?? true,
-            'porcentaje_servicio' => $request->porcentaje_servicio,
-        ]);
+        // --- INICIO DE CAMBIO: Uso de transacción ---
+        // Se envuelve la creación en una transacción para garantizar la integridad de los datos.
+        // Si algo falla al crear el AnfitrionOperativo, la creación del Anfitrion se revierte.
+        try {
+            DB::transaction(function () use ($request, $spa_id, $clases) {
+                $anfitrion = Anfitrion::create([
+                    'RFC' => $request->RFC,
+                    'apellido_paterno' => $request->apellido_paterno,
+                    'apellido_materno' => $request->apellido_materno,
+                    'nombre_usuario' => $request->nombre_usuario,
+                    'password' => bcrypt($request->password),
+                    'spa_id' => $spa_id,
+                    'rol' => $request->rol,
+                    'departamento' => $request->departamento,
+                    'accesos' => $request->filled('accesos') ? array_values(array_map('intval', $request->accesos)) : [],
+                    'activo' => $request->activo ?? true,
+                    'porcentaje_servicio' => $request->porcentaje_servicio,
+                ]);
 
-        AnfitrionOperativo::create([
-            'anfitrion_id' => $anfitrion->id,
-            'departamento' => $request->departamento,
-            'clases_actividad' => $clases,
-        ]);
+                AnfitrionOperativo::create([
+                    'anfitrion_id' => $anfitrion->id,
+                    'departamento' => $request->departamento,
+                    'clases_actividad' => $clases,
+                ]);
+            });
 
-        return redirect()->back()->with('mensaje_exito', 'Anfitrión creado correctamente.');
+            return redirect()->back()->with('mensaje_exito', 'Anfitrión creado correctamente.');
+        } catch (\Exception $e) {
+            Log::error("Error al crear anfitrión: " . $e->getMessage());
+            return redirect()->back()->withErrors(['error' => 'Ocurrió un error al guardar el anfitrión.'])->withInput();
+        }
+        // --- FIN DE CAMBIO ---
     }
 
     // Actualiza anfitrion con validación y actualización relacionada
